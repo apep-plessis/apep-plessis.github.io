@@ -475,6 +475,19 @@ dialog::backdrop { background: rgb(31 30 33 / 45%); backdrop-filter: blur(2px); 
   border: 2px solid color-mix(in srgb, var(--iris) 45%, var(--card));
 }
 
+.elsewhere { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 20px; }
+
+.elsewhere a {
+  padding: 6px 16px;
+  border: 2px solid var(--action);
+  border-radius: 999px;
+  font-size: 0.87rem;
+  font-weight: 800;
+  text-decoration: none;
+  color: color-mix(in srgb, var(--action) 72%, var(--ink));
+  background: color-mix(in srgb, var(--action) 10%, var(--card));
+}
+
 footer {
   margin-top: 52px;
   padding-top: 22px;
