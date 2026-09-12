@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<svg xmlns="http://www.w3.org/2000/svg" width="336" height="336" viewBox="0 0 336 336">
+<g fill="none" stroke="#F2B441" stroke-width="24" stroke-linecap="round">
+<circle cx="168" cy="168" r="76" fill="#F2B441" stroke="none"/>
+<path d="M168 26v34"/>
+<path d="M168 26v34" transform="rotate(45 168 168)"/>
+<path d="M168 26v34" transform="rotate(90 168 168)"/>
+<path d="M168 26v34" transform="rotate(135 168 168)"/>
+<path d="M168 26v34" transform="rotate(180 168 168)"/>
+<path d="M168 26v34" transform="rotate(225 168 168)"/>
+<path d="M168 26v34" transform="rotate(270 168 168)"/>
+<path d="M168 26v34" transform="rotate(315 168 168)"/>
+</g>
+</svg>
