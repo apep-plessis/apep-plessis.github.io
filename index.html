@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agenda et documents — APEP</title>
+<meta name="description" content="Les dates et les documents de l'Association des parents d'élèves du Plessis-Belleville.">
+<meta name="theme-color" content="#6eb4e7">
+<link rel="icon" href="assets/favicon/favicon.ico" sizes="any">
+<link rel="icon" href="assets/favicon/favicon-256.png" type="image/png">
+<link rel="apple-touch-icon" href="assets/apep-favicon.png">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <img class="mains" src="assets/mains/apep.svg" alt="" width="1183" height="756">
+    <div>
+      <h1><span class="a1">A</span><span class="p1">P</span><span class="e">E</span><span class="p2">P</span></h1>
+      <p class="full">Association des parents d'élèves du Plessis-Belleville</p>
+    </div>
+    <p id="count" class="count" hidden></p>
+  </header>
+
+  <div class="ribbon" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <p class="pitch">Les dates des trois écoles et de l'association, et les documents utiles aux parents.</p>
+
+  <div id="demo-banner" class="banner" hidden>
+    Aperçu avec des événements fictifs — les vrais calendriers ne sont pas encore branchés.
+  </div>
+
+  <div id="errors" class="notice warn" hidden></div>
+
+  <nav class="tabs" role="tablist" aria-label="Vues">
+    <button type="button" role="tab" data-tab="upcoming" aria-selected="true">À venir</button>
+    <button type="button" role="tab" data-tab="month" aria-selected="false">Mois</button>
+    <button type="button" role="tab" data-tab="documents" aria-selected="false">Documents</button>
+  </nav>
+
+  <div id="filters" class="filters" aria-label="Filtrer par école"></div>
+
+  <main>
+    <section id="view-upcoming">
+      <div id="upcoming-list"></div>
+    </section>
+
+    <section id="view-month" hidden>
+      <div class="month-nav">
+        <h2 id="month-label"></h2>
+        <button id="today" class="today" type="button">Aujourd'hui</button>
+        <button id="prev" type="button" aria-label="Mois précédent">‹</button>
+        <button id="next" type="button" aria-label="Mois suivant">›</button>
+      </div>
+      <div id="month-grid"></div>
+    </section>
+
+    <section id="view-documents" hidden>
+      <div id="documents-list"></div>
+    </section>
+  </main>
+
+  <section id="subscribe" class="subscribe" hidden>
+    <h2>Recevoir les dates dans son propre agenda</h2>
+    <p>
+      Un clic ajoute le calendrier au téléphone ou à l'ordinateur : les nouvelles dates
+      arrivent ensuite toutes seules, sans avoir à revenir sur cette page.
+    </p>
+    <div class="links"></div>
+  </section>
+
+  <footer>
+    APEP — Association des parents d'élèves du Plessis-Belleville.
+    Les dates proviennent des agendas publics de l'association et des écoles.
+  </footer>
+
+</div>
+
+<dialog id="sheet"></dialog>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
