@@ -18,6 +18,35 @@ const el = (html) => {
   return t.content.firstElementChild;
 };
 
+const LINKABLE = /(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"]|www\.[^\s<]+[^\s<.,;:!?)\]'"])|([\w.+-]+@[\w-]+(?:\.[\w-]+)+)|((?<![\d+])(?:\+33 ?|0)[1-9](?:[ .-]?\d{2}){4}(?!\d))/g;
+
+function descriptionText(raw) {
+  if (!/<[a-z][^>]*>/i.test(raw)) return raw;
+  const doc = new DOMParser().parseFromString(raw, 'text/html');
+  doc.querySelectorAll('br').forEach((br) => br.replaceWith('\n'));
+  doc.querySelectorAll('p, div, li').forEach((b) => b.append('\n'));
+  doc.querySelectorAll('a[href]').forEach((a) => {
+    const href = a.getAttribute('href');
+    if (a.textContent.trim() !== href) a.append(` (${href})`);
+  });
+  return doc.body.textContent.trim();
+}
+
+function linkify(text) {
+  let html = '';
+  let last = 0;
+  for (const m of text.matchAll(LINKABLE)) {
+    const [found, url, mail, phone] = m;
+    let href = url?.startsWith('www.') ? `https://${url}` : url;
+    if (mail) href = `mailto:${mail}`;
+    if (phone) href = `tel:${phone.replace(/[ .-]/g, '')}`;
+    const external = url ? ' target="_blank" rel="noopener"' : '';
+    html += `${esc(text.slice(last, m.index))}<a href="${esc(href)}"${external}>${esc(found)}</a>`;
+    last = m.index + found.length;
+  }
+  return html + esc(text.slice(last));
+}
+
 const dowShort = (d) => DOWS[weekdayIndex(d)];
 const monShort = (d) => new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(d).replace('.', '');
 
@@ -122,6 +151,7 @@ export function eventSheet(ev, label) {
       <dl></dl>
       <div class="actions">
         <button class="primary" value="close" type="button">Fermer</button>
+        <button value="share" type="button">Partager</button>
       </div>
     </div>`);
   const dl = sheet.querySelector('dl');
@@ -131,7 +161,7 @@ export function eventSheet(ev, label) {
   }
   if (ev.description) {
     dl.append(el(`<dt>Détail</dt>`));
-    dl.append(el(`<dd>${esc(ev.description).replace(/\n/g, '<br>')}</dd>`));
+    dl.append(el(`<dd>${linkify(descriptionText(ev.description)).replace(/\n/g, '<br>')}</dd>`));
   }
   if (!dl.children.length) dl.remove();
   if (ev.link) {
@@ -172,8 +202,16 @@ const docIcon = (mime) => (DOC_ICONS.find(([re]) => re.test(mime)) || [null, '�
 const docDate = (iso) =>
   iso ? new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(iso)) : '';
 
-export function renderDocuments(container, { folders, files }) {
+export function renderDocuments(container, { folders, files, failed }) {
   container.replaceChildren();
+  if (failed) {
+    container.append(el(`
+      <div class="notice warn">
+        <h2>Les documents n'ont pas pu être chargés</h2>
+        Réessayez dans quelques instants.
+      </div>`));
+    return;
+  }
   if (!folders.length && !files.length) {
     container.append(el(`
       <div class="empty">

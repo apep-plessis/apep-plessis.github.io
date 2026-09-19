@@ -427,7 +427,7 @@ dialog::backdrop { background: rgb(31 30 33 / 45%); backdrop-filter: blur(2px); 
 .sheet .when { color: var(--ink-soft); margin: 0; }
 .sheet dl { margin: 18px 0 0; display: grid; gap: 13px; }
 .sheet dt { font-size: 0.74rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-faint); }
-.sheet dd { margin: 3px 0 0; font-weight: 700; }
+.sheet dd { margin: 3px 0 0; font-weight: 700; overflow-wrap: anywhere; }
 .sheet dd a { color: var(--action); }
 .sheet .actions { display: flex; gap: 9px; margin-top: 24px; flex-wrap: wrap; clear: both; }
 
@@ -460,6 +460,8 @@ dialog::backdrop { background: rgb(31 30 33 / 45%); backdrop-filter: blur(2px); 
 
 .empty img { width: 96px; height: auto; opacity: 0.55; margin-bottom: 10px; }
 .empty p { margin: 0; max-width: 34ch; margin-inline: auto; }
+
+.loading { color: var(--ink-faint); text-align: center; padding: 44px 0; margin: 0; }
 
 .notice { padding: 20px 24px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--line); color: var(--ink-soft); }
 .notice.warn { border: 2px solid var(--action); background: color-mix(in srgb, var(--action) 10%, var(--card)); }

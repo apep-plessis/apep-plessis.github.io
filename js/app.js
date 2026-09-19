@@ -52,7 +52,39 @@ function openSheet(node) {
   dialog.showModal();
 }
 
-const showEvent = (ev) => openSheet(eventSheet(ev, labelOf(ev.calendar)));
+const HASH_PREFIX = '#evenement=';
+
+const eventUrl = (ev) => `${location.origin}${location.pathname}${HASH_PREFIX}${encodeURIComponent(ev.id)}`;
+
+async function shareEvent(ev, button) {
+  const url = eventUrl(ev);
+  if (navigator.share) {
+    await navigator.share({ title: ev.title, url }).catch(() => {});
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    button.textContent = 'Lien copié';
+  } catch {
+    prompt('Lien à copier :', url);
+  }
+}
+
+function showEvent(ev) {
+  const sheet = eventSheet(ev, labelOf(ev.calendar));
+  const share = sheet.querySelector('[value="share"]');
+  share.addEventListener('click', () => shareEvent(ev, share));
+  openSheet(sheet);
+  history.replaceState(null, '', eventUrl(ev));
+}
+
+function openFromHash() {
+  if (!location.hash.startsWith(HASH_PREFIX)) return;
+  const id = decodeURIComponent(location.hash.slice(HASH_PREFIX.length));
+  const ev = state.events.find((e) => e.id === id);
+  if (ev) showEvent(ev);
+  else history.replaceState(null, '', location.pathname);
+}
 
 const showDay = (day, events) =>
   openSheet(daySheet(day, events, labelOf, (ev) => showEvent(ev)));
@@ -86,7 +118,7 @@ function renderFilters() {
 }
 
 function renderCount(events) {
-  const soon = events.filter((ev) => ev.start < addDays(new Date(), 14));
+  const soon = events.filter((ev) => ev.start < addDays(new Date(), 15));
   const box = $('#count');
   box.hidden = soon.length === 0;
   if (soon.length) {
@@ -150,9 +182,6 @@ function reportErrors(errors) {
 
 async function start() {
   loadHidden();
-  document.querySelectorAll('.tabs button').forEach((btn) => {
-    btn.addEventListener('click', () => selectTab(btn.dataset.tab));
-  });
   $('#prev').addEventListener('click', () => {
     state.month = addMonths(state.month, -1);
     render();
@@ -168,6 +197,9 @@ async function start() {
   dialog.addEventListener('click', (e) => {
     if (e.target === dialog) dialog.close();
   });
+  dialog.addEventListener('close', () => {
+    if (location.hash) history.replaceState(null, '', location.pathname);
+  });
 
   if (!isConfigured()) {
     state.demo = true;
@@ -178,7 +210,7 @@ async function start() {
   } else {
     const [{ events, errors }, documents] = await Promise.all([
       loadEvents(),
-      loadDocuments().catch(() => ({ folders: [], files: [] })),
+      loadDocuments().catch(() => ({ folders: [], files: [], failed: true })),
     ]);
     state.events = events;
     state.documents = documents;
@@ -188,7 +220,11 @@ async function start() {
   }
 
   renderFilters();
+  document.querySelectorAll('.tabs button').forEach((btn) => {
+    btn.addEventListener('click', () => selectTab(btn.dataset.tab));
+  });
   selectTab('upcoming');
+  openFromHash();
 }
 
 start();
