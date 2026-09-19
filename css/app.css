@@ -108,8 +108,8 @@ a { color: inherit; }
 .ribbon { display: flex; height: 7px; border-radius: 4px; overflow: hidden; }
 .ribbon i { flex: 1; }
 .ribbon i:nth-child(1) { background: var(--iris); }
-.ribbon i:nth-child(2) { background: var(--pal); }
-.ribbon i:nth-child(3) { background: var(--lw); }
+.ribbon i:nth-child(2) { background: var(--lw); }
+.ribbon i:nth-child(3) { background: var(--pal); }
 
 .pitch { color: var(--ink-soft); font-size: 0.95rem; margin: 18px 0 22px; max-width: 80ch; }
 
