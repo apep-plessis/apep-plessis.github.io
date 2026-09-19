@@ -240,13 +240,18 @@ export function renderDocuments(container, { folders, files, failed }) {
   container.append(list);
 }
 
+// L'iPad se présente comme un Mac ; Android et Windows ne savent pas ouvrir webcal://.
+const APPLE = /iPhone|iPad|iPod|Macintosh/;
+
 export function renderSubscribe(container, calendars) {
   const links = container.querySelector('.links');
   links.replaceChildren();
   for (const c of calendars.filter((x) => x.id)) {
-    const ics = `webcal://calendar.google.com/calendar/ical/${encodeURIComponent(c.id)}/public/basic.ics`;
+    const href = APPLE.test(navigator.userAgent)
+      ? `webcal://calendar.google.com/calendar/ical/${encodeURIComponent(c.id)}/public/basic.ics`
+      : `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(c.id)}`;
     links.append(el(`
-      <a href="${esc(ics)}" style="--accent: var(--${c.key})">
+      <a href="${esc(href)}" style="--accent: var(--${c.key})">
         <img src="${hand(c.key)}" alt="">${esc(c.short)}
       </a>`));
   }
