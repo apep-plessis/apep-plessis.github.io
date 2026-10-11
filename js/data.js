@@ -24,7 +24,7 @@ async function getJson(url) {
   return res.json();
 }
 
-const STATUT = /^❌\s*(Reporté|Annulé)\s*:\s*/i;
+const STATUT = /^(?:❌|⏳)\s*(Reporté|Annulé|À confirmer)\s*:\s*/i;
 
 function normalize(raw, calendar) {
   const allDay = Boolean(raw.start.date);

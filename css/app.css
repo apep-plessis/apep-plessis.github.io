@@ -226,6 +226,7 @@ a { color: inherit; }
 .event .title { display: block; font-weight: 800; font-size: 1.05rem; }
 .annule .nom, .pill.annule { text-decoration: line-through; opacity: 0.6; }
 .statut { display: inline-block; background: #C8423B; color: #fff; border-radius: 6px; padding: 1px 7px; font-size: 0.8em; margin-right: 4px; text-decoration: none; }
+.statut.attente { background: #E0902E; }
 .event .meta { display: block; color: var(--ink-soft); font-size: 0.9rem; font-weight: 700; margin-top: 4px; }
 .event .tags { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 10px; }
 
