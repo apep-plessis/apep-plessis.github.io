@@ -24,12 +24,17 @@ async function getJson(url) {
   return res.json();
 }
 
+const STATUT = /^❌\s*(Reporté|Annulé)\s*:\s*/i;
+
 function normalize(raw, calendar) {
   const allDay = Boolean(raw.start.date);
+  const titre = raw.summary || '(sans titre)';
+  const statut = titre.match(STATUT);
   return {
     id: `${calendar.key}:${raw.id}`,
     calendar: calendar.key,
-    title: raw.summary || '(sans titre)',
+    title: statut ? titre.slice(statut[0].length) : titre,
+    statut: statut ? statut[1] : '',
     location: raw.location || '',
     description: raw.description || '',
     link: raw.htmlLink || '',

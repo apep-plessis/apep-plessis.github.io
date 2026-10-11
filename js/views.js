@@ -50,17 +50,19 @@ function linkify(text) {
 const dowShort = (d) => DOWS[weekdayIndex(d)];
 const monShort = (d) => new Intl.DateTimeFormat('fr-FR', { month: 'short' }).format(d).replace('.', '');
 
+const statutBadge = (ev) => (ev.statut ? `<span class="statut">${esc(ev.statut)}</span> ` : '');
+
 export function eventCard(ev, label) {
   const soon = relativeLabel(ev.start);
   const node = el(`
-    <button class="event" style="--accent: var(--${ev.calendar})" type="button">
+    <button class="event${ev.statut ? ' annule' : ''}" style="--accent: var(--${ev.calendar})" type="button">
       <span class="date">
         <span class="dow">${esc(dowShort(ev.start))}</span>
         <span class="dom">${ev.start.getDate()}</span>
         <span class="mon">${esc(monShort(ev.start))}</span>
       </span>
       <span>
-        <span class="title">${esc(ev.title)}</span>
+        <span class="title">${statutBadge(ev)}<span class="nom">${esc(ev.title)}</span></span>
         <span class="meta">${esc(eventWhen(ev))}${ev.location ? ' · ' + esc(ev.location) : ''}</span>
         <span class="tags">
           <span class="badge">${esc(label)}</span>
@@ -120,7 +122,7 @@ export function renderMonth(container, monthStart, events, labelOf, onPickDay) {
         cell.setAttribute('aria-label', `${dayFull(day)} — ${dayEvents.length} événement${dayEvents.length > 1 ? 's' : ''}`);
         for (const ev of dayEvents.slice(0, MAX_PILLS)) {
           const text = ev.allDay ? ev.title : `${time(ev.start)} ${ev.title}`;
-          cell.append(el(`<span class="pill" style="--accent: var(--${ev.calendar})">${esc(text)}</span>`));
+          cell.append(el(`<span class="pill${ev.statut ? ' annule' : ''}" style="--accent: var(--${ev.calendar})">${esc(text)}</span>`));
         }
         if (dayEvents.length > MAX_PILLS) {
           cell.append(el(`<span class="more">+${dayEvents.length - MAX_PILLS}</span>`));
@@ -146,7 +148,7 @@ export function eventSheet(ev, label) {
     <div class="sheet" style="--accent: var(--${ev.calendar})">
       <img class="hand" src="${hand(ev.calendar)}" alt="">
       <span class="badge">${esc(label)}</span>
-      <h2>${esc(ev.title)}</h2>
+      <h2${ev.statut ? ' class="annule"' : ''}>${statutBadge(ev)}<span class="nom">${esc(ev.title)}</span></h2>
       <p class="when">${esc(dayFull(ev.start))} · ${esc(eventWhen(ev))}</p>
       <dl></dl>
       <div class="actions">
