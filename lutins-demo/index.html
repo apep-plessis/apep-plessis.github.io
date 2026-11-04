@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Concours des lutins farceurs — APEP</title>
+<link rel="icon" href="../assets/favicon/favicon.ico" sizes="any">
+<link rel="stylesheet" href="../css/app.css">
+<style>
+.q { text-align: center; font-weight: 800; font-size: 1.3rem; margin: 22px 0 14px; text-wrap: balance; }
+.duel { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; max-width: 720px; margin: 0 auto; }
+.vs { font-weight: 800; color: var(--action); }
+.pick { position: relative; display: block; width: 100%; padding: 0; border: 0; border-radius: var(--radius); overflow: hidden;
+  background: var(--card); box-shadow: var(--shadow); cursor: pointer; font: inherit; color: inherit; text-align: left;
+  transition: transform .18s ease, opacity .25s ease; }
+.pick img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; }
+.pick span { display: block; padding: 9px 12px 11px; font-size: .9rem; line-height: 1.25; min-height: 3.3em; }
+.pick:hover { transform: translateY(-3px); }
+.pick.win { transform: scale(1.03); }
+.pick.win::after { content: "♥"; position: absolute; top: 10px; right: 12px; width: 42px; height: 42px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--action); color: #fff; font-size: 1.4rem; }
+.pick.lose { opacity: .35; transform: scale(.97); }
+.pick:focus-visible, .bar button:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; max-width: 720px; margin: 14px auto 0; }
+.mine { color: var(--ink-soft); font-variant-numeric: tabular-nums; margin: 0; }
+.bar button, .actions button { font: inherit; border-radius: 999px; padding: 8px 14px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+.actions button.main { background: var(--action); border-color: var(--action); color: #fff; }
+.follow { max-width: 720px; margin: 16px auto 0; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 14px 16px; text-align: center; }
+.follow p { margin: 0 0 8px; }
+.follow a { display: inline-block; margin: 4px 6px; color: var(--action); }
+.howto { max-width: 720px; margin: 22px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.howto div { background: var(--card); border-radius: 14px; padding: 12px; font-size: .9rem; color: var(--ink-soft); }
+.howto b { display: block; color: var(--ink); font-weight: 800; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+th, td { padding: 8px 10px; text-align: left; font-variant-numeric: tabular-nums; }
+th { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
+tr + tr td { border-top: 1px solid var(--line-soft); }
+td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; display: block; }
+.num { text-align: right; }
+.up { color: var(--pal); } .down { color: var(--action); }
+@media (max-width: 560px) {
+  .duel { grid-template-columns: 1fr 1fr; }
+  .vs { display: none; }
+  .pick span { font-size: .82rem; }
+  .howto { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .pick { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <img class="mains" src="../assets/mains/apep.svg" alt="" width="1183" height="756">
+    <div>
+      <h1><span class="a1">A</span><span class="p1">P</span><span class="e">E</span><span class="p2">P</span></h1>
+      <p class="full">Concours des lutins farceurs</p>
+    </div>
+  </header>
+
+  <div class="ribbon" aria-hidden="true"><i></i><i></i><i></i></div>
+
+  <div class="banner">Démonstration : photos d'exemple, votes gardés dans ce navigateur.</div>
+
+  <main>
+    <section id="view-voter">
+      <p class="q">Quel lutin est le plus farceur ?<br><small>Touchez la photo que vous préférez</small></p>
+      <div class="duel">
+        <button type="button" class="pick" id="pick-a"><img alt=""><span></span></button>
+        <div class="vs" aria-hidden="true">ou</div>
+        <button type="button" class="pick" id="pick-b"><img alt=""><span></span></button>
+      </div>
+      <div class="bar">
+        <p class="mine" id="mine">Aucun vote pour l'instant</p>
+        <button type="button" id="skip">Je n'arrive pas à choisir</button>
+      </div>
+      <div class="follow" id="follow" hidden>
+        <p>Merci pour vos votes ! Toutes les photos sont aussi sur nos réseaux.</p>
+        <a href="https://www.facebook.com/people/APEP-Association-des-Parents-d%C3%89l%C3%A8ve-du-Plessis-Belleville/61593023807080/" target="_blank" rel="noopener">Suivre la page Facebook</a>
+        <a href="https://www.instagram.com/apep.plessis/" target="_blank" rel="noopener">Suivre le compte Instagram</a>
+      </div>
+      <div class="howto">
+        <div><b>Un duel, un choix</b>Deux photos, on touche celle qu'on préfère. Le duel suivant arrive tout de suite.</div>
+        <div><b>Autant qu'on veut</b>On s'arrête quand on veut, on revient demain : chaque choix compte.</div>
+        <div><b>Sans inscription</b>Pas de compte, pas d'e-mail pour voter. Le résultat sera annoncé le 25 décembre.</div>
+      </div>
+    </section>
+
+    <section id="view-coulisses" hidden>
+      <h2>Coulisses : le classement</h2>
+      <p>Visible du bureau seulement. Chaque photo part à 1000 points ; battre une photo mieux classée rapporte
+        beaucoup, une moins bien classée presque rien. Les photos qui ont le moins joué passent en priorité.</p>
+      <div class="actions">
+        <button type="button" class="main" id="sim">Simuler 200 votes de parents</button>
+        <button type="button" id="reset">Tout remettre à zéro</button>
+        <a href="#">Retour au vote</a>
+      </div>
+      <table>
+        <thead><tr><th>#</th><th></th><th>Photo</th><th class="num">Duels</th><th class="num">Points</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
+  </main>
+
+</div>
+
+<script>
+const PHOTOS = [
+  { id: "p1", title: "Bain de guimauves dans le chocolat chaud", appeal: 1150 },
+  { id: "p2", title: "Le portrait de famille retouché", appeal: 1000 },
+  { id: "p3", title: "Moustaches pour tout le monde", appeal: 1080 },
+  { id: "p4", title: "Papy a une nouvelle moustache", appeal: 960 },
+  { id: "p5", title: "Il signe son œuvre", appeal: 900 },
+  { id: "p6", title: "Le sapin momifié au papier toilette", appeal: 1200 },
+  { id: "p7", title: "Bataille de farine dans la cuisine", appeal: 1050 },
+  { id: "p8", title: "Caché dans le sac de farine", appeal: 880 },
+  { id: "p9", title: "Les chaussettes de la cheminée", appeal: 940 },
+  { id: "p10", title: "Balançoire au-dessus du salon", appeal: 1010 },
+].map(p => ({ ...p, src: `photos/${p.id}.webp` }));
+
+const K = 32, START = 1000, KEY = "duel-lutins-demo", FOLLOW_AFTER = 5;
+
+function fresh() {
+  const s = { mine: 0, p: {} };
+  PHOTOS.forEach(ph => s.p[ph.id] = { elo: START, n: 0, last: START });
+  return s;
+}
+function load() {
+  try { const raw = localStorage.getItem(KEY); if (raw) return JSON.parse(raw); } catch (e) {}
+  return fresh();
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+let state = load();
+
+function expected(a, b) { return 1 / (1 + Math.pow(10, (b - a) / 400)); }
+function record(winner, loser) {
+  const w = state.p[winner], l = state.p[loser];
+  const d = K * (1 - expected(w.elo, l.elo));
+  w.elo += d; l.elo -= d; w.n++; l.n++;
+}
+
+let lastPair = [];
+function nextPair() {
+  const ids = PHOTOS.map(p => p.id).filter(id => !lastPair.includes(id));
+  const minN = Math.min(...ids.map(id => state.p[id].n));
+  const fewest = ids.filter(id => state.p[id].n <= minN + 1);
+  const a = fewest[Math.floor(Math.random() * fewest.length)];
+  const near = ids.filter(id => id !== a)
+    .sort((x, y) => Math.abs(state.p[x].elo - state.p[a].elo) - Math.abs(state.p[y].elo - state.p[a].elo))
+    .slice(0, 4);
+  const b = near[Math.floor(Math.random() * near.length)];
+  lastPair = [a, b];
+  return Math.random() < .5 ? [a, b] : [b, a];
+}
+
+const byId = Object.fromEntries(PHOTOS.map(p => [p.id, p]));
+const pa = document.getElementById("pick-a"), pb = document.getElementById("pick-b");
+let pair, busy = false;
+
+function fill(btn, id) {
+  const ph = byId[id], img = btn.querySelector("img");
+  img.src = ph.src; img.alt = ph.title;
+  btn.querySelector("span").textContent = ph.title;
+  btn.classList.remove("win", "lose");
+}
+function show() { pair = nextPair(); fill(pa, pair[0]); fill(pb, pair[1]); busy = false; }
+function mineText() {
+  const n = state.mine;
+  document.getElementById("mine").innerHTML = n === 0 ? "Aucun vote pour l'instant" : `Vous avez voté <b>${n}</b> fois. Merci !`;
+  document.getElementById("follow").hidden = n < FOLLOW_AFTER;
+}
+function choose(i) {
+  if (busy) return; busy = true;
+  const [win, lose] = i === 0 ? [pa, pb] : [pb, pa];
+  record(pair[i], pair[1 - i]); state.mine++; save();
+  win.classList.add("win"); lose.classList.add("lose");
+  mineText();
+  setTimeout(show, matchMedia("(prefers-reduced-motion: reduce)").matches ? 150 : 550);
+}
+pa.addEventListener("click", () => choose(0));
+pb.addEventListener("click", () => choose(1));
+document.getElementById("skip").addEventListener("click", () => { if (!busy) show(); });
+
+function rows() {
+  const list = PHOTOS.slice().sort((x, y) => state.p[y.id].elo - state.p[x.id].elo);
+  document.getElementById("rows").innerHTML = list.map((ph, i) => {
+    const s = state.p[ph.id], d = Math.round(s.elo - s.last);
+    const delta = d === 0 ? "" : ` <small class="${d > 0 ? "up" : "down"}">${d > 0 ? "+" : ""}${d}</small>`;
+    return `<tr><td>${i + 1}</td><td><img src="${ph.src}" alt=""></td><td>${ph.title}</td>
+      <td class="num">${s.n}</td><td class="num">${Math.round(s.elo)}${delta}</td></tr>`;
+  }).join("");
+}
+function mark() { PHOTOS.forEach(ph => state.p[ph.id].last = state.p[ph.id].elo); }
+
+document.getElementById("sim").addEventListener("click", () => {
+  mark();
+  for (let k = 0; k < 200; k++) {
+    const [a, b] = nextPair();
+    Math.random() < expected(byId[a].appeal, byId[b].appeal) ? record(a, b) : record(b, a);
+  }
+  save(); rows();
+});
+document.getElementById("reset").addEventListener("click", () => { state = fresh(); save(); rows(); mineText(); });
+
+function route() {
+  const coulisses = location.hash === "#coulisses";
+  document.getElementById("view-voter").hidden = coulisses;
+  document.getElementById("view-coulisses").hidden = !coulisses;
+  if (coulisses) { rows(); mark(); save(); }
+}
+addEventListener("hashchange", route);
+route(); show(); mineText();
+</script>
+</body>
+</html>
