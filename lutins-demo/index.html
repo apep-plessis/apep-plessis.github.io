@@ -123,7 +123,7 @@ let mine = Number(store.get("lutins-mine")) || 0;
 
 const image = id => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w800`;
 const pa = $("pick-a"), pb = $("pick-b");
-let current = null, busy = true;
+let current = null, busy = true, recent = [];
 
 function message(texte) {
   $("view-voter").querySelector(".duel").hidden = true;
@@ -140,6 +140,7 @@ function render(r) {
   if (r.restant === 0) return message("Vous avez voté autant qu'on peut aujourd'hui. Merci ! Revenez demain.");
   if (!r.paire) return message("Le vote est momentanément indisponible. Réessayez un peu plus tard.");
   current = r;
+  recent = r.paire.map(p => p.id).concat(recent).slice(0, 4);
   fill(pa, r.paire[0]); fill(pb, r.paire[1]);
   $("mine").innerHTML = (mine === 0 ? "Aucun vote pour l'instant" : `Vous avez voté <b>${mine}</b> fois. Merci !`)
     + (r.restant <= 10 ? ` Encore ${r.restant} aujourd'hui.` : "");
@@ -160,8 +161,8 @@ async function choose(i) {
   win.classList.add("win"); lose.classList.add("lose");
   const anim = pause(matchMedia("(prefers-reduced-motion: reduce)").matches ? 150 : 550);
   try {
-    let r = await call({}, { jeton: current.jeton, gagnante: current.paire[i].id });
-    if (r.erreur) r = await call({ vid });
+    let r = await call({}, { jeton: current.jeton, gagnante: current.paire[i].id, exclure: recent.join(",") });
+    if (r.erreur) r = await call({ vid, exclure: recent.join(",") });
     else { mine++; store.set("lutins-mine", mine); }
     await anim; render(r);
   } catch (e) { failed(); }
@@ -170,7 +171,7 @@ pa.addEventListener("click", () => choose(0));
 pb.addEventListener("click", () => choose(1));
 $("skip").addEventListener("click", async () => {
   if (busy) return; busy = true;
-  try { render(await call({ vid, exclure: current.paire.map(p => p.id).join(",") })); } catch (e) { failed(); }
+  try { render(await call({ vid, exclure: recent.join(",") })); } catch (e) { failed(); }
 });
 
 $("cle-form").addEventListener("submit", async ev => {
