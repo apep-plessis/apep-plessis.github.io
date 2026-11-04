@@ -26,6 +26,7 @@
 .mine { color: var(--ink-soft); font-variant-numeric: tabular-nums; margin: 0; }
 .bar button, .actions button { font: inherit; border-radius: 999px; padding: 8px 14px; cursor: pointer;
   border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+.actions input { font: inherit; border-radius: 999px; padding: 8px 14px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
 .actions button.main { background: var(--action); border-color: var(--action); color: #fff; }
 .follow { max-width: 720px; margin: 16px auto 0; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
   padding: 14px 16px; text-align: center; }
@@ -34,7 +35,7 @@
 .howto { max-width: 720px; margin: 22px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .howto div { background: var(--card); border-radius: 14px; padding: 12px; font-size: .9rem; color: var(--ink-soft); }
 .howto b { display: block; color: var(--ink); font-weight: 800; }
-.actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+.actions { align-items: center; display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
 table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
 th, td { padding: 8px 10px; text-align: left; font-variant-numeric: tabular-nums; }
 th { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
@@ -64,7 +65,7 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
 
   <div class="ribbon" aria-hidden="true"><i></i><i></i><i></i></div>
 
-  <div class="banner">Démonstration : photos d'exemple, votes gardés dans ce navigateur.</div>
+  <div class="banner">Version de test : les votes vont dans un tableau de test et seront effacés.</div>
 
   <main>
     <section id="view-voter">
@@ -92,14 +93,13 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
 
     <section id="view-coulisses" hidden>
       <h2>Coulisses : le classement</h2>
-      <p>Visible du bureau seulement. Chaque photo part à 1000 points ; battre une photo mieux classée rapporte
-        beaucoup, une moins bien classée presque rien. Les photos qui ont le moins joué passent en priorité.</p>
-      <div class="actions">
-        <button type="button" class="main" id="sim">Simuler 200 votes de parents</button>
-        <button type="button" id="reset">Tout remettre à zéro</button>
+      <form class="actions" id="cle-form">
+        <input type="password" id="cle" placeholder="Clé des coulisses" autocomplete="current-password" required>
+        <button type="submit" class="main">Afficher</button>
         <a href="#">Retour au vote</a>
-      </div>
-      <table>
+      </form>
+      <p id="totaux"></p>
+      <table hidden id="table">
         <thead><tr><th>#</th><th></th><th>Photo</th><th class="num">Duels</th><th class="num">Points</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
@@ -109,111 +109,92 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
 </div>
 
 <script>
-const PHOTOS = [
-  { id: "p1", title: "Bain de guimauves dans le chocolat chaud", appeal: 1150 },
-  { id: "p2", title: "Le portrait de famille retouché", appeal: 1000 },
-  { id: "p3", title: "Moustaches pour tout le monde", appeal: 1080 },
-  { id: "p4", title: "Papy a une nouvelle moustache", appeal: 960 },
-  { id: "p5", title: "Il signe son œuvre", appeal: 900 },
-  { id: "p6", title: "Le sapin momifié au papier toilette", appeal: 1200 },
-  { id: "p7", title: "Bataille de farine dans la cuisine", appeal: 1050 },
-  { id: "p8", title: "Caché dans le sac de farine", appeal: 880 },
-  { id: "p9", title: "Les chaussettes de la cheminée", appeal: 940 },
-  { id: "p10", title: "Balançoire au-dessus du salon", appeal: 1010 },
-].map(p => ({ ...p, src: `photos/${p.id}.webp` }));
+const API = "";
+const FOLLOW_AFTER = 5;
 
-const K = 32, START = 1000, KEY = "duel-lutins-demo", FOLLOW_AFTER = 5;
+const $ = id => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+};
+const vid = store.get("lutins-vid") || crypto.randomUUID();
+store.set("lutins-vid", vid);
+let mine = Number(store.get("lutins-mine")) || 0;
 
-function fresh() {
-  const s = { mine: 0, p: {} };
-  PHOTOS.forEach(ph => s.p[ph.id] = { elo: START, n: 0, last: START });
-  return s;
+const image = id => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w800`;
+const pa = $("pick-a"), pb = $("pick-b");
+let current = null, busy = true;
+
+function message(texte) {
+  $("view-voter").querySelector(".duel").hidden = true;
+  $("skip").hidden = true;
+  $("mine").textContent = texte;
 }
-function load() {
-  try { const raw = localStorage.getItem(KEY); if (raw) return JSON.parse(raw); } catch (e) {}
-  return fresh();
-}
-function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
-let state = load();
-
-function expected(a, b) { return 1 / (1 + Math.pow(10, (b - a) / 400)); }
-function record(winner, loser) {
-  const w = state.p[winner], l = state.p[loser];
-  const d = K * (1 - expected(w.elo, l.elo));
-  w.elo += d; l.elo -= d; w.n++; l.n++;
-}
-
-let lastPair = [];
-function nextPair() {
-  const ids = PHOTOS.map(p => p.id).filter(id => !lastPair.includes(id));
-  const minN = Math.min(...ids.map(id => state.p[id].n));
-  const fewest = ids.filter(id => state.p[id].n <= minN + 1);
-  const a = fewest[Math.floor(Math.random() * fewest.length)];
-  const near = ids.filter(id => id !== a)
-    .sort((x, y) => Math.abs(state.p[x].elo - state.p[a].elo) - Math.abs(state.p[y].elo - state.p[a].elo))
-    .slice(0, 4);
-  const b = near[Math.floor(Math.random() * near.length)];
-  lastPair = [a, b];
-  return Math.random() < .5 ? [a, b] : [b, a];
-}
-
-const byId = Object.fromEntries(PHOTOS.map(p => [p.id, p]));
-const pa = document.getElementById("pick-a"), pb = document.getElementById("pick-b");
-let pair, busy = false;
-
-function fill(btn, id) {
-  const ph = byId[id], img = btn.querySelector("img");
-  img.src = ph.src; img.alt = ph.title;
-  btn.querySelector("span").textContent = ph.title;
+function fill(btn, ph) {
+  const img = btn.querySelector("img");
+  img.src = image(ph.id); img.alt = ph.titre;
+  btn.querySelector("span").textContent = ph.titre;
   btn.classList.remove("win", "lose");
 }
-function show() { pair = nextPair(); fill(pa, pair[0]); fill(pb, pair[1]); busy = false; }
-function mineText() {
-  const n = state.mine;
-  document.getElementById("mine").innerHTML = n === 0 ? "Aucun vote pour l'instant" : `Vous avez voté <b>${n}</b> fois. Merci !`;
-  document.getElementById("follow").hidden = n < FOLLOW_AFTER;
+function render(r) {
+  if (r.restant === 0) return message("Vous avez voté autant qu'on peut aujourd'hui. Merci ! Revenez demain.");
+  if (!r.paire) return message("Le vote est momentanément indisponible. Réessayez un peu plus tard.");
+  current = r;
+  fill(pa, r.paire[0]); fill(pb, r.paire[1]);
+  $("mine").innerHTML = (mine === 0 ? "Aucun vote pour l'instant" : `Vous avez voté <b>${mine}</b> fois. Merci !`)
+    + (r.restant <= 10 ? ` Encore ${r.restant} aujourd'hui.` : "");
+  $("follow").hidden = mine < FOLLOW_AFTER;
+  busy = false;
 }
-function choose(i) {
+async function call(params, body) {
+  const url = API + "?" + new URLSearchParams(params);
+  const res = await fetch(url, body ? { method: "POST", body: JSON.stringify(body) } : {});
+  return res.json();
+}
+const pause = ms => new Promise(r => setTimeout(r, ms));
+const failed = () => message("Le vote est momentanément indisponible. Réessayez un peu plus tard.");
+
+async function choose(i) {
   if (busy) return; busy = true;
   const [win, lose] = i === 0 ? [pa, pb] : [pb, pa];
-  record(pair[i], pair[1 - i]); state.mine++; save();
   win.classList.add("win"); lose.classList.add("lose");
-  mineText();
-  setTimeout(show, matchMedia("(prefers-reduced-motion: reduce)").matches ? 150 : 550);
+  const anim = pause(matchMedia("(prefers-reduced-motion: reduce)").matches ? 150 : 550);
+  try {
+    let r = await call({}, { jeton: current.jeton, gagnante: current.paire[i].id });
+    if (r.erreur) r = await call({ vid });
+    else { mine++; store.set("lutins-mine", mine); }
+    await anim; render(r);
+  } catch (e) { failed(); }
 }
 pa.addEventListener("click", () => choose(0));
 pb.addEventListener("click", () => choose(1));
-document.getElementById("skip").addEventListener("click", () => { if (!busy) show(); });
-
-function rows() {
-  const list = PHOTOS.slice().sort((x, y) => state.p[y.id].elo - state.p[x.id].elo);
-  document.getElementById("rows").innerHTML = list.map((ph, i) => {
-    const s = state.p[ph.id], d = Math.round(s.elo - s.last);
-    const delta = d === 0 ? "" : ` <small class="${d > 0 ? "up" : "down"}">${d > 0 ? "+" : ""}${d}</small>`;
-    return `<tr><td>${i + 1}</td><td><img src="${ph.src}" alt=""></td><td>${ph.title}</td>
-      <td class="num">${s.n}</td><td class="num">${Math.round(s.elo)}${delta}</td></tr>`;
-  }).join("");
-}
-function mark() { PHOTOS.forEach(ph => state.p[ph.id].last = state.p[ph.id].elo); }
-
-document.getElementById("sim").addEventListener("click", () => {
-  mark();
-  for (let k = 0; k < 200; k++) {
-    const [a, b] = nextPair();
-    Math.random() < expected(byId[a].appeal, byId[b].appeal) ? record(a, b) : record(b, a);
-  }
-  save(); rows();
+$("skip").addEventListener("click", async () => {
+  if (busy) return; busy = true;
+  try { render(await call({ vid, exclure: current.paire.map(p => p.id).join(",") })); } catch (e) { failed(); }
 });
-document.getElementById("reset").addEventListener("click", () => { state = fresh(); save(); rows(); mineText(); });
+
+$("cle-form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  try {
+    const r = await call({ action: "classement", cle: $("cle").value });
+    if (r.erreur) { $("totaux").textContent = "Clé refusée."; $("table").hidden = true; return; }
+    $("totaux").textContent = `${r.votes} votes au total, dont ${r.aujourdhui} aujourd'hui.`;
+    $("rows").innerHTML = r.photos.map((ph, i) => `<tr><td>${i + 1}</td><td><img src="${image(ph.id)}" alt=""></td>
+      <td></td><td class="num">${ph.duels}</td><td class="num">${Math.round(ph.points)}</td></tr>`).join("");
+    [...$("rows").rows].forEach((tr, i) => tr.cells[2].textContent = r.photos[i].titre);
+    $("table").hidden = false;
+  } catch (e) { $("totaux").textContent = "Classement indisponible."; }
+});
 
 function route() {
   const coulisses = location.hash === "#coulisses";
-  document.getElementById("view-voter").hidden = coulisses;
-  document.getElementById("view-coulisses").hidden = !coulisses;
-  if (coulisses) { rows(); mark(); save(); }
+  $("view-voter").hidden = coulisses;
+  $("view-coulisses").hidden = !coulisses;
 }
 addEventListener("hashchange", route);
-route(); show(); mineText();
+route();
+if (!API) failed();
+else call({ vid }).then(render, failed);
 </script>
 </body>
 </html>
