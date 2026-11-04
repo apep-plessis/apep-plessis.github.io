@@ -108,8 +108,10 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
 
 </div>
 
-<script>
-const API = "";
+<script type="module">
+import { CONFIG } from "../js/config.js";
+
+const API = "https://script.google.com/macros/s/AKfycbxUkATP8k3pFilHGCCsqRspuAwKN_lH0t2bJkhBGhqufyYD6cCocR0aj67V3Cq-KZT-/exec";
 const FOLLOW_AFTER = 5;
 
 const $ = id => document.getElementById(id);
@@ -121,7 +123,7 @@ const vid = store.get("lutins-vid") || crypto.randomUUID();
 store.set("lutins-vid", vid);
 let mine = Number(store.get("lutins-mine")) || 0;
 
-const image = id => `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w800`;
+const image = id => `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media&key=${CONFIG.apiKey}`;
 const pa = $("pick-a"), pb = $("pick-b");
 let current = null, busy = true, recent = [];
 
