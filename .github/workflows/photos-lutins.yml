@@ -19,7 +19,7 @@ jobs:
       - run: pip install pillow==11.0.0
       - run: python .github/scripts/sync_photos_lutins.py
       - run: |
-          git add lutins-demo/photos
+          git add lutins/photos
           git diff --cached --quiet && exit 0
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"

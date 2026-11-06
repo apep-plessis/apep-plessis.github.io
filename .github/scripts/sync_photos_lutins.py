@@ -7,7 +7,7 @@ import urllib.request
 from PIL import Image, ImageOps
 
 API = "https://script.google.com/macros/s/AKfycbxUkATP8k3pFilHGCCsqRspuAwKN_lH0t2bJkhBGhqufyYD6cCocR0aj67V3Cq-KZT-/exec"
-OUT = pathlib.Path(__file__).resolve().parents[2] / "lutins-demo" / "photos"
+OUT = pathlib.Path(__file__).resolve().parents[2] / "lutins" / "photos"
 MAX_PX = 1000
 
 

@@ -38,6 +38,7 @@
 
   <p class="pitch">Les dates des trois écoles et de l'association, et les documents utiles aux parents.
     Les dates sont susceptibles d'être modifiées : certaines ne sont pas encore définitives.</p>
+  <p class="promo" id="promo" hidden></p>
 
   <div id="demo-banner" class="banner" hidden>
     Aperçu avec des événements fictifs — les vrais calendriers ne sont pas encore branchés.
@@ -97,5 +98,6 @@
 
 <dialog id="sheet"></dialog>
 <script type="module" src="js/app.js"></script>
+<script type="module">import { lignePromo } from "./js/promos.js"; lignePromo(document.getElementById("promo"));</script>
 </body>
 </html>

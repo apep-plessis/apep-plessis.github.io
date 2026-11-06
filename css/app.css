@@ -524,3 +524,20 @@ footer {
   .subscribe { padding: 20px 17px; }
   .sheet { padding: 20px; }
 }
+
+.promo { margin: 0 0 16px; }
+.promo a {
+  display: block;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.promo a::after { content: " ›"; color: var(--action); }
