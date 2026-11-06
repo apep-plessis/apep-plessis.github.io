@@ -47,6 +47,8 @@ tr + tr td { border-top: 1px solid var(--line-soft); }
 td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; display: block; }
 .num { text-align: right; }
 .up { color: var(--pal); } .down { color: var(--action); }
+.alertes { background: var(--card); border-left: 4px solid var(--action); border-radius: 14px; padding: 10px 14px; margin: 0 0 14px; }
+.alertes ul { margin: 6px 0 0; padding-left: 1.2em; }
 @media (max-width: 560px) {
   .duel { grid-template-columns: 1fr 1fr; }
   .vs { display: none; }
@@ -90,7 +92,7 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
       </div>
       <div class="howto">
         <div><b>Un duel, un choix</b>Deux photos, on touche celle qu'on préfère. Le duel suivant arrive tout de suite.</div>
-        <div><b>Jusqu'à 50 votes par jour</b>On s'arrête quand on veut, on revient le lendemain : chaque choix compte.</div>
+        <div><b>Jusqu'à 100 votes par jour</b>On s'arrête quand on veut, on revient le lendemain : chaque choix compte.</div>
         <div><b>Sans inscription</b>Pas de compte, pas d'e-mail pour voter. Le résultat sera annoncé le 25 décembre.</div>
       </div>
       <details class="explain">
@@ -100,7 +102,7 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
           <li>La photo choisie gagne des points, et l'autre en perd. Battre une photo déjà bien classée rapporte beaucoup ; battre une photo mal classée, très peu.</li>
           <li>Toutes les photos passent souvent, même celles déposées tard : une photo qui a peu joué sort plus souvent que les autres.</li>
           <li>Une photo que vous venez de voir ne revient pas dans vos deux duels suivants.</li>
-          <li>Chaque appareil peut voter 50 fois par jour, pour que chaque famille pèse autant.</li>
+          <li>Chaque appareil peut voter 100 fois par jour, pour que chaque famille pèse autant.</li>
           <li>Le classement reste secret jusqu'au résultat, le 25 décembre.</li>
           <li>Aucune donnée personnelle n'est demandée : votre téléphone garde seulement un numéro anonyme, pour compter vos votes.</li>
         </ul>
@@ -115,8 +117,9 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
         <a href="#">Retour au vote</a>
       </form>
       <p id="totaux"></p>
+      <div class="alertes" id="alertes" hidden><b>Évolutions anormales aujourd'hui</b><ul id="alertes-liste"></ul></div>
       <table hidden id="table">
-        <thead><tr><th>#</th><th></th><th>Photo</th><th class="num">Duels</th><th class="num">Points</th></tr></thead>
+        <thead><tr><th>#</th><th></th><th>Photo</th><th class="num">Duels</th><th class="num">Points</th><th class="num">Aujourd'hui</th><th class="num">Habituel</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </section>
@@ -146,7 +149,7 @@ document.addEventListener("error", e => {
   if (img.tagName === "IMG" && img.dataset.id && !img.src.startsWith("https://www.googleapis")) img.src = drive(img.dataset.id);
 }, true);
 const pa = $("pick-a"), pb = $("pick-b");
-let current = null, queue = [], shown = [], restant = null, waiting = true, busy = true, seq = 0, applied = 0;
+let current = null, queue = [], shown = [], restant = null, waiting = true, busy = true, seq = 0, applied = 0, sent = 0;
 
 function message(texte) {
   $("view-voter").querySelector(".duel").hidden = true;
@@ -168,8 +171,8 @@ function counter() {
 const ids = d => d ? d.paire.map(p => p.id) : [];
 
 function next() {
+  if (restant === 0) return message("Vous avez voté autant qu'on peut aujourd'hui. Merci ! Revenez demain.");
   if (!queue.length) {
-    if (restant === 0) return message("Vous avez voté autant qu'on peut aujourd'hui. Merci ! Revenez demain.");
     waiting = true; busy = true;
     return;
   }
@@ -180,24 +183,24 @@ function next() {
   counter();
   busy = false;
 }
-function refill(r, n) {
+function refill(r, n, envoyes) {
   if (n < applied) return;
   applied = n;
   if (!r.duels && r.restant !== 0) { if (waiting) failed(); return; }
+  restant = Math.max(0, r.restant - (sent - envoyes));
   const fresh = (r.duels || []).filter(d => !ids(d).some(id => shown.includes(id)));
-  queue = fresh.length ? fresh : (r.duels || []);
-  restant = r.restant;
+  queue = (fresh.length ? fresh : (r.duels || [])).slice(0, restant);
   queue.forEach(d => d.paire.forEach(p => { new Image().src = image(p.id); }));
   if (waiting) next();
 }
 async function call(params, body) {
   const url = API + "?" + new URLSearchParams(params);
-  const res = await fetch(url, body ? { method: "POST", body: JSON.stringify(body) } : {});
+  const res = await fetch(url, body ? { method: "POST", body: JSON.stringify(body), keepalive: true } : {});
   return res.json();
 }
 function request(params, body) {
-  const n = ++seq;
-  return call(params, body).then(r => refill(r, n), () => { if (waiting) failed(); });
+  const n = ++seq, envoyes = sent;
+  return call(params, body).then(r => refill(r, n, envoyes), () => { if (waiting) failed(); });
 }
 const pause = ms => new Promise(r => setTimeout(r, ms));
 
@@ -207,9 +210,9 @@ async function choose(i) {
   win.classList.add("win"); lose.classList.add("lose");
   const voted = current;
   const exclure = ids(queue[0]).concat(ids(voted), shown).join(",");
-  const n = ++seq;
+  const n = ++seq, envoyes = ++sent;
   call({}, { jeton: voted.jeton, gagnante: voted.paire[i].id, exclure })
-    .then(r => r.erreur ? request({ vid, exclure }) : refill(r, n), () => { if (waiting) failed(); });
+    .then(r => r.erreur ? request({ vid, exclure }) : refill(r, n, envoyes), () => { if (waiting) failed(); });
   mine++; store.set("lutins-mine", mine);
   if (restant) restant--;
   await pause(matchMedia("(prefers-reduced-motion: reduce)").matches ? 150 : 450);
@@ -230,8 +233,15 @@ $("cle-form").addEventListener("submit", async ev => {
     const r = await call({ action: "classement", cle: $("cle").value });
     if (r.erreur) { $("totaux").textContent = "Clé refusée."; $("table").hidden = true; return; }
     $("totaux").textContent = `${r.votes} votes au total, dont ${r.aujourdhui} aujourd'hui.`;
+    const pct = x => `${Math.round(100 * x)} %`;
+    const jourTxt = ph => ph.jour.n ? `${ph.jour.v}/${ph.jour.n} (${pct(ph.jour.v / ph.jour.n)})` : "—";
+    const alertes = r.photos.filter(ph => ph.alerte);
+    $("alertes").hidden = !alertes.length;
+    $("alertes-liste").replaceChildren(...alertes.map(ph => Object.assign(document.createElement("li"),
+      { textContent: `${ph.titre} ${ph.ecart > 0 ? "monte" : "descend"} : ${jourTxt(ph)}, habituel ${pct(ph.habituel)}` })));
     $("rows").innerHTML = r.photos.map((ph, i) => `<tr><td>${i + 1}</td><td><img data-id="${ph.id}" src="${image(ph.id)}" alt=""></td>
-      <td></td><td class="num">${ph.duels}</td><td class="num">${Math.round(ph.points)}</td></tr>`).join("");
+      <td></td><td class="num">${ph.duels}</td><td class="num">${Math.round(ph.points)}</td>
+      <td class="num${ph.alerte ? (ph.ecart > 0 ? " up" : " down") : ""}">${jourTxt(ph)}${ph.alerte ? " ⚠" : ""}</td><td class="num">${pct(ph.habituel)}</td></tr>`).join("");
     [...$("rows").rows].forEach((tr, i) => tr.cells[2].textContent = r.photos[i].titre);
     $("table").hidden = false;
   } catch (e) { $("totaux").textContent = "Classement indisponible."; }
