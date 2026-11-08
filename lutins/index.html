@@ -167,7 +167,6 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
 </div>
 
 <script type="module">
-import { CONFIG } from "../js/config.js";
 import { promosActives, lignePromo } from "../js/promos.js";
 
 const API = "https://script.google.com/macros/s/AKfycbxUkATP8k3pFilHGCCsqRspuAwKN_lH0t2bJkhBGhqufyYD6cCocR0aj67V3Cq-KZT-/exec";
@@ -193,12 +192,13 @@ store.set("lutins-vid", vid);
 let mine = Number(store.get("lutins-mine")) || 0;
 
 const image = id => `photos/${encodeURIComponent(id)}.webp`;
-const drive = id => `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(id)}?alt=media&key=${CONFIG.apiKey}`;
-document.addEventListener("error", e => {
-  const img = e.target;
-  if (img.tagName === "IMG" && img.dataset.id && !img.src.startsWith("https://www.googleapis")) img.src = drive(img.dataset.id);
-}, true);
 const pa = $("pick-a"), pb = $("pick-b");
+const absentes = new Set();
+const absente = id => { absentes.add(id); };
+[pa, pb].forEach(btn => btn.querySelector("img").addEventListener("error", e => {
+  absente(e.target.dataset.id);
+  if (!busy) next();
+}));
 let current = null, queue = [], shown = [], restant = null, waiting = true, busy = true, seq = 0, applied = 0, sent = 0;
 
 function message(texte) {
@@ -232,8 +232,11 @@ const ids = d => d ? d.paire.map(p => p.id) : [];
 
 function next() {
   if (restant === 0) return message("Vous avez voté autant qu'on peut aujourd'hui. Merci ! Revenez demain.");
+  const avant = queue.length;
+  queue = queue.filter(d => !ids(d).some(id => absentes.has(id)));
   if (!queue.length) {
     waiting = true; busy = true;
+    if (avant) request({ vid, exclure: [...absentes].concat(shown).join(",") });
     return;
   }
   waiting = false;
@@ -255,7 +258,7 @@ function refill(r, n, envoyes) {
   restant = Math.max(0, r.restant - (sent - envoyes));
   const fresh = (r.duels || []).filter(d => !ids(d).some(id => shown.includes(id)));
   queue = (fresh.length ? fresh : (r.duels || [])).slice(0, restant);
-  queue.forEach(d => d.paire.forEach(p => { new Image().src = image(p.id); }));
+  queue.forEach(d => d.paire.forEach(p => { Object.assign(new Image(), { onerror: () => absente(p.id) }).src = image(p.id); }));
   if (waiting) next();
 }
 async function call(params, body) {
@@ -314,24 +317,25 @@ $("cle-form").addEventListener("submit", async ev => {
 
 const COTE_MAX = 1600;
 async function preparer(fichier) {
-  try {
-    const bmp = await createImageBitmap(fichier);
-    const k = Math.min(1, COTE_MAX / Math.max(bmp.width, bmp.height));
-    const c = Object.assign(document.createElement("canvas"), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
-    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
-    const url = c.toDataURL("image/jpeg", 0.85);
-    return { type: "image/jpeg", data: url.slice(url.indexOf(",") + 1) };
-  } catch (e) {
-    const url = await new Promise((ok, ko) => Object.assign(new FileReader(), { onload: ev => ok(ev.target.result), onerror: ko }).readAsDataURL(fichier));
-    return { type: fichier.type || "image/jpeg", data: url.slice(url.indexOf(",") + 1) };
-  }
+  if (!fichier.type.startsWith("image/")) throw new Error("photo");
+  let bmp;
+  try { bmp = await createImageBitmap(fichier); } catch (e) { throw new Error("lecture"); }
+  const k = Math.min(1, COTE_MAX / Math.max(bmp.width, bmp.height));
+  const c = Object.assign(document.createElement("canvas"), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  const url = c.toDataURL("image/jpeg", 0.85);
+  return { data: url.slice(url.indexOf(",") + 1) };
 }
 const ERREURS_DEPOT = {
   ferme: "Les dépôts sont terminés depuis le 20 décembre.",
   quota: "Trop d'envois aujourd'hui : envoyez-nous la photo par Messenger ou par e-mail.",
   limite: "Vous avez déjà envoyé 3 photos aujourd'hui. Pour en envoyer d'autres, écrivez-nous par Messenger ou par e-mail.",
-  photo: "Ce fichier n'est pas une photo lisible.",
-  champs: "Vérifiez le nom, l'e-mail et la case à cocher.",
+  photo: "Ce fichier n'est pas une photo. Choisissez une image (JPEG, PNG…).",
+  lecture: "Cet appareil n'arrive pas à lire cette photo (format HEIC ou autre format rare). Essayez depuis votre téléphone, ou envoyez-la par Messenger ou par e-mail.",
+  taille: "Cette photo est trop lourde (10 Mo maximum).",
+  nom: "Donnez un nom à la photo.",
+  email: "Cette adresse e-mail ne semble pas valide.",
+  accord: "Cochez la case pour accepter la publication de la photo.",
 };
 $("depot-form").addEventListener("submit", async ev => {
   ev.preventDefault();
