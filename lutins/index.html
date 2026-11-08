@@ -329,6 +329,7 @@ async function preparer(fichier) {
 const ERREURS_DEPOT = {
   ferme: "Les dépôts sont terminés depuis le 20 décembre.",
   quota: "Trop d'envois aujourd'hui : envoyez-nous la photo par Messenger ou par e-mail.",
+  limite: "Vous avez déjà envoyé 3 photos aujourd'hui. Pour en envoyer d'autres, écrivez-nous par Messenger ou par e-mail.",
   photo: "Ce fichier n'est pas une photo lisible.",
   champs: "Vérifiez le nom, l'e-mail et la case à cocher.",
 };
@@ -340,7 +341,7 @@ $("depot-form").addEventListener("submit", async ev => {
   try {
     const photo = await preparer($("depot-photo").files[0]);
     const res = await fetch(API, { method: "POST", body: JSON.stringify({
-      action: "depot", nom: $("depot-nom").value, email: $("depot-email").value,
+      action: "depot", vid, nom: $("depot-nom").value, email: $("depot-email").value,
       accord: $("depot-accord").checked, piege: $("depot-piege").value, ...photo }) });
     const r = await res.json();
     if (r.erreur) throw new Error(r.erreur);
