@@ -133,10 +133,7 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
               <label>École<select class="ecole" required>
                 <option value="">Choisir…</option><option>Pré au Lièvre</option><option>Les Iris</option><option>Louisette Wattier</option>
               </select></label>
-              <label>Classe<select class="niveau" required>
-                <option value="">Choisir…</option><option>Petite section</option><option>Moyenne section</option><option>Grande section</option>
-                <option>CP</option><option>CE1</option><option>CE2</option><option>CM1</option><option>CM2</option>
-              </select></label>
+              <label>Classe<select class="niveau" required disabled><option value="">Choisir d'abord l'école</option></select></label>
               <button type="button" class="lien retirer" hidden>Retirer cet enfant</button>
             </fieldset>
           </template>
@@ -364,6 +361,15 @@ const ERREURS_DEPOT = {
   accord: "Cochez la case pour accepter la publication de la photo.",
 };
 const ENFANTS_MAX = 5;
+const MATERNELLE = ["Petite section", "Moyenne section", "Grande section"];
+const NIVEAUX = { "Pré au Lièvre": MATERNELLE, "Les Iris": MATERNELLE, "Louisette Wattier": ["CP", "CE1", "CE2", "CM1", "CM2"] };
+$("enfants").addEventListener("change", ev => {
+  if (!ev.target.classList.contains("ecole")) return;
+  const niveau = ev.target.closest(".enfant").querySelector(".niveau");
+  const liste = NIVEAUX[ev.target.value];
+  niveau.disabled = !liste;
+  niveau.replaceChildren(new Option(liste ? "Choisir…" : "Choisir d'abord l'école", ""), ...(liste || []).map(n => new Option(n)));
+});
 function ajouterEnfant() {
   const f = $("modele-enfant").content.firstElementChild.cloneNode(true);
   $("enfants").append(f);
