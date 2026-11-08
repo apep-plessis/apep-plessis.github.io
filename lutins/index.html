@@ -45,7 +45,7 @@
 .envoi small { display: block; margin-top: 10px; color: var(--ink-soft); }
 .depot { display: grid; gap: 10px; margin-top: 12px; }
 .depot label { display: grid; gap: 4px; font-weight: 700; font-size: .92rem; }
-.depot input[type=text], .depot input[type=email], .depot input[type=file] { font: inherit; font-weight: 400; border-radius: 12px; padding: 8px 12px;
+.depot input[type=text], .depot input[type=email], .depot input[type=file], .depot select { font: inherit; font-weight: 400; border-radius: 12px; padding: 8px 12px;
   border: 1px solid var(--line); background: var(--card); color: var(--ink); width: 100%; box-sizing: border-box; }
 .depot .case { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; }
 .depot .case input { margin-top: .25em; flex: none; }
@@ -121,6 +121,14 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
         <form class="depot" id="depot-form">
           <label>Photo<input type="file" id="depot-photo" accept="image/*" required></label>
           <label>Nom de la photo<input type="text" id="depot-nom" maxlength="60" required></label>
+          <label>Prénom de votre enfant<input type="text" id="depot-prenom" maxlength="40" required></label>
+          <label>Son école<select id="depot-ecole" required>
+            <option value="">Choisir…</option><option>Pré au Lièvre</option><option>Les Iris</option><option>Louisette Wattier</option>
+          </select></label>
+          <label>Sa classe<select id="depot-niveau" required>
+            <option value="">Choisir…</option><option>Petite section</option><option>Moyenne section</option><option>Grande section</option>
+            <option>CP</option><option>CE1</option><option>CE2</option><option>CM1</option><option>CM2</option>
+          </select></label>
           <label>Votre e-mail, pour vous confirmer la réception<input type="email" id="depot-email" autocomplete="email" required></label>
           <label class="piege" aria-hidden="true">Site<input type="text" id="depot-piege" tabindex="-1" autocomplete="off"></label>
           <label class="case"><input type="checkbox" id="depot-accord" required>J'accepte que cette photo soit publiée sur ce site et sur les pages Facebook et Instagram de l'APEP.</label>
@@ -338,6 +346,9 @@ const ERREURS_DEPOT = {
   photo: "Ce fichier n'est pas une photo. Formats acceptés : JPEG, PNG, HEIC, WebP, TIFF, GIF, BMP, AVIF.",
   taille: "Cette photo est trop lourde (20 Mo maximum).",
   nom: "Donnez un nom à la photo.",
+  prenom: "Indiquez le prénom de votre enfant.",
+  ecole: "Choisissez l'école de votre enfant.",
+  niveau: "Choisissez la classe de votre enfant.",
   email: "Cette adresse e-mail ne semble pas valide.",
   accord: "Cochez la case pour accepter la publication de la photo.",
 };
@@ -349,7 +360,8 @@ $("depot-form").addEventListener("submit", async ev => {
   try {
     const photo = await preparer($("depot-photo").files[0]);
     const res = await fetch(API, { method: "POST", body: JSON.stringify({
-      action: "depot", vid, nom: $("depot-nom").value, email: $("depot-email").value,
+      action: "depot", vid, nom: $("depot-nom").value,
+      prenom: $("depot-prenom").value, ecole: $("depot-ecole").value, niveau: $("depot-niveau").value, email: $("depot-email").value,
       accord: $("depot-accord").checked, piege: $("depot-piege").value, ...photo }) });
     const r = await res.json();
     if (r.erreur) throw new Error(r.erreur);
