@@ -10,7 +10,11 @@
 <style>
 .q { text-align: center; font-weight: 800; font-size: 1.3rem; margin: 22px 0 14px; text-wrap: balance; }
 .duel { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; max-width: 720px; margin: 0 auto; }
+.duel[hidden] { display: none; }
 .vs { font-weight: 800; color: var(--action); }
+.chargement { display: inline-block; width: 1em; height: 1em; margin-right: .5em; vertical-align: -.15em; border-radius: 50%;
+  border: 2px solid var(--line); border-top-color: var(--action); animation: tourne .8s linear infinite; }
+@keyframes tourne { to { transform: rotate(1turn); } }
 .pick { position: relative; display: block; width: 100%; padding: 0; border: 0; border-radius: var(--radius); overflow: hidden;
   background: var(--card); box-shadow: var(--shadow); cursor: pointer; font: inherit; color: inherit; text-align: left;
   transition: transform .18s ease, opacity .25s ease; }
@@ -97,14 +101,14 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
   <main>
     <section id="view-voter">
       <p class="q">Quel lutin est le plus farceur ?<br><small>Touchez la photo que vous préférez</small></p>
-      <div class="duel">
+      <div class="duel" hidden>
         <button type="button" class="pick" id="pick-a"><img alt=""><span></span></button>
         <div class="vs" aria-hidden="true">ou</div>
         <button type="button" class="pick" id="pick-b"><img alt=""><span></span></button>
       </div>
       <div class="bar">
-        <p class="mine" id="mine">Aucun vote pour l'instant</p>
-        <button type="button" id="skip">Je n'arrive pas à choisir</button>
+        <p class="mine" id="mine"><span class="chargement" aria-hidden="true"></span>Chargement des photos…</p>
+        <button type="button" id="skip" hidden>Je n'arrive pas à choisir</button>
       </div>
       <div class="follow" id="follow" hidden></div>
       <section class="envoi" id="envoi">
@@ -236,6 +240,8 @@ function next() {
   current = queue.shift();
   shown = ids(current).concat(shown).slice(0, 4);
   fill(pa, current.paire[0]); fill(pb, current.paire[1]);
+  $("view-voter").querySelector(".duel").hidden = false;
+  $("skip").hidden = false;
   counter();
   busy = false;
 }
