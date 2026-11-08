@@ -24,7 +24,11 @@ def main():
         if target.exists():
             continue
         data = base64.b64decode(get(f"action=photo&id={file_id}")["data"])
-        img = ImageOps.exif_transpose(Image.open(io.BytesIO(data)))
+        try:
+            img = ImageOps.exif_transpose(Image.open(io.BytesIO(data)))
+        except OSError as e:
+            print("::warning::illisible, à convertir en JPEG :", file_id, e)
+            continue
         img.thumbnail((MAX_PX, MAX_PX))
         img.convert("RGB").save(target, "WEBP", quality=82)
         print("ajoutée", file_id)
