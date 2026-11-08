@@ -58,6 +58,7 @@
 .enfant { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 0; display: grid; gap: 8px; }
 .enfant legend { font-weight: 700; font-size: .92rem; padding: 0 4px; }
 .depot button.lien { justify-self: start; background: none; border: 0; padding: 0; color: var(--action); text-decoration: underline; border-radius: 0; }
+.depot .aide { margin: 0; font-size: .88rem; color: var(--ink-soft); }
 #depot-etat { margin: 0; font-weight: 700; }
 #depot-etat.erreur, #ajout-etat.erreur { color: var(--action); }
 .merci { margin-top: 12px; border: 2px solid var(--pal); border-radius: 14px; padding: 14px 16px; text-align: center; }
@@ -143,6 +144,7 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
         <form class="depot" id="depot-form">
           <label>Photo<input type="file" id="depot-photo" accept="image/*" required></label>
           <label>Nom de la photo<input type="text" id="depot-nom" maxlength="60" required></label>
+          <p class="aide">Seuls la photo et son nom sont publiés. Le prénom, l'école et la classe de votre enfant, comme votre e-mail, servent uniquement à vérifier que le concours reste réservé aux familles des écoles du Plessis-Belleville et à retrouver le gagnant.</p>
           <div id="enfants"></div>
           <button type="button" class="lien" id="ajout-enfant">+ Ajouter un autre enfant</button>
           <template id="modele-enfant">
