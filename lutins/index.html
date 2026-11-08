@@ -59,12 +59,12 @@
 .enfant legend { font-weight: 700; font-size: .92rem; padding: 0 4px; }
 .depot button.lien { justify-self: start; background: none; border: 0; padding: 0; color: var(--action); text-decoration: underline; border-radius: 0; }
 #depot-etat { margin: 0; font-weight: 700; }
-#depot-etat.erreur { color: var(--action); }
+#depot-etat.erreur, #ajout-etat.erreur { color: var(--action); }
 .merci { margin-top: 12px; border: 2px solid var(--pal); border-radius: 14px; padding: 14px 16px; text-align: center; }
 .merci b { display: block; font-size: 1.2rem; margin-bottom: 6px; }
 .merci p { margin: 0 0 10px; }
 .merci button { font: inherit; border-radius: 999px; padding: 8px 18px; cursor: pointer; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
-#depot-etat:empty { display: none; }
+#depot-etat:empty, #ajout-etat:empty { display: none; }
 .howto { max-width: 720px; margin: 22px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .howto div { background: var(--card); border-radius: 14px; padding: 12px; font-size: .9rem; color: var(--ink-soft); }
 .howto b { display: block; color: var(--ink); font-weight: 800; }
@@ -80,6 +80,18 @@ tr + tr td { border-top: 1px solid var(--line-soft); }
 td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; display: block; }
 .num { text-align: right; }
 .up { color: var(--pal); } .down { color: var(--action); }
+.zone { margin: 22px 0; }
+.zone h2 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.zone h2 button, .carte button { font: inherit; font-size: .9rem; border-radius: 999px; padding: 6px 14px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+.attente { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.carte { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; display: grid; gap: 8px; align-content: start; }
+.carte .vignette { width: 100%; height: 260px; object-fit: contain; background: var(--line-soft); border-radius: 12px; }
+.carte input { font: inherit; border-radius: 10px; padding: 6px 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); width: 100%; box-sizing: border-box; }
+.carte small { color: var(--ink-soft); }
+.carte .boutons { display: flex; gap: 8px; }
+.carte .valider { background: var(--action); border-color: var(--action); color: #fff; }
+.ajout { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 18px; max-width: 720px; }
 .alertes { background: var(--card); border-left: 4px solid var(--action); border-radius: 14px; padding: 10px 14px; margin: 0 0 14px; }
 .alertes ul { margin: 6px 0 0; padding-left: 1.2em; }
 @media (max-width: 560px) {
@@ -177,12 +189,31 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
     </section>
 
     <section id="view-coulisses" hidden>
-      <h2>Coulisses : le classement</h2>
+      <h2>Coulisses</h2>
       <form class="actions" id="cle-form">
         <input type="password" id="cle" placeholder="Clé des coulisses" autocomplete="current-password" required>
         <button type="submit" class="main">Afficher</button>
         <a href="#">Retour au vote</a>
       </form>
+      <section class="zone" id="zone-attente" hidden>
+        <h2>Photos à valider <button type="button" id="attente-maj">Actualiser</button></h2>
+        <p id="attente-etat"></p>
+        <div class="attente" id="attente"></div>
+      </section>
+      <section class="zone" id="zone-ajout" hidden>
+        <h2>Ajouter une photo reçue par Messenger ou par mail</h2>
+        <form class="depot ajout" id="ajout-form">
+          <label>Photo<input type="file" id="ajout-photo" accept="image/*" required></label>
+          <label>Nom de la photo<input type="text" id="ajout-nom" maxlength="60" required></label>
+          <div id="ajout-enfants"></div>
+          <button type="button" class="lien" id="ajout-plus">+ Ajouter un autre enfant</button>
+          <label>Reçue par<select id="ajout-canal"><option>Messenger</option><option value="mail">Mail</option></select></label>
+          <label>E-mail du parent (facultatif)<input type="email" id="ajout-email"></label>
+          <button type="submit" id="ajout-bouton">Mettre en ligne</button>
+          <p id="ajout-etat" role="status"></p>
+        </form>
+      </section>
+      <h2 id="titre-classement" hidden>Classement</h2>
       <p id="totaux"></p>
       <div class="alertes" id="alertes" hidden><b>Évolutions anormales aujourd'hui</b><ul id="alertes-liste"></ul></div>
       <table hidden id="table">
@@ -328,6 +359,7 @@ $("cle-form").addEventListener("submit", async ev => {
   try {
     const r = await call({ action: "classement", cle: $("cle").value });
     if (r.erreur) { $("totaux").textContent = "Clé refusée."; $("table").hidden = true; return; }
+    if (cle !== $("cle").value) { cle = $("cle").value; ouvrirCoulisses(); }
     $("totaux").textContent = `${r.votes} votes au total, dont ${r.aujourdhui} aujourd'hui.`;
     const pct = x => `${Math.round(100 * x)} %`;
     const jourTxt = ph => ph.jour.n ? `${ph.jour.v}/${ph.jour.n} (${pct(ph.jour.v / ph.jour.n)})` : "—";
@@ -375,33 +407,40 @@ const ERREURS_DEPOT = {
 const ENFANTS_MAX = 5;
 const MATERNELLE = ["Petite section", "Moyenne section", "Grande section"];
 const NIVEAUX = { "Pré au Lièvre": MATERNELLE, "Les Iris": MATERNELLE, "Louisette Wattier": ["CP", "CE1", "CE2", "CM1", "CM2"] };
-$("enfants").addEventListener("change", ev => {
-  if (!ev.target.classList.contains("ecole")) return;
-  const niveau = ev.target.closest(".enfant").querySelector(".niveau");
-  const liste = NIVEAUX[ev.target.value];
-  niveau.disabled = !liste;
-  niveau.replaceChildren(new Option(liste ? "Choisir…" : "Choisir d'abord l'école", ""), ...(liste || []).map(n => new Option(n)));
-});
-function ajouterEnfant() {
-  const f = $("modele-enfant").content.firstElementChild.cloneNode(true);
-  $("enfants").append(f);
-  numeroter();
-}
-function numeroter() {
-  const tous = [...$("enfants").children];
-  tous.forEach((e, i) => {
-    e.querySelector("legend").textContent = tous.length > 1 ? `Enfant ${i + 1}` : "Votre enfant";
-    e.querySelector(".retirer").hidden = tous.length < 2;
+function blocEnfants(conteneur, plus, titreSeul) {
+  const numeroter = () => {
+    const tous = [...conteneur.children];
+    tous.forEach((e, i) => {
+      e.querySelector("legend").textContent = tous.length > 1 ? `Enfant ${i + 1}` : titreSeul;
+      e.querySelector(".retirer").hidden = tous.length < 2;
+    });
+    plus.hidden = tous.length >= ENFANTS_MAX;
+  };
+  const ajouter = () => {
+    conteneur.append($("modele-enfant").content.firstElementChild.cloneNode(true));
+    numeroter();
+  };
+  conteneur.addEventListener("change", ev => {
+    if (!ev.target.classList.contains("ecole")) return;
+    const niveau = ev.target.closest(".enfant").querySelector(".niveau");
+    const liste = NIVEAUX[ev.target.value];
+    niveau.disabled = !liste;
+    niveau.replaceChildren(new Option(liste ? "Choisir…" : "Choisir d'abord l'école", ""), ...(liste || []).map(n => new Option(n)));
   });
-  $("ajout-enfant").hidden = tous.length >= ENFANTS_MAX;
+  conteneur.addEventListener("click", ev => {
+    if (!ev.target.classList.contains("retirer")) return;
+    ev.target.closest(".enfant").remove();
+    numeroter();
+  });
+  plus.addEventListener("click", ajouter);
+  ajouter();
+  return {
+    valeurs: () => [...conteneur.children].map(f => ({
+      prenom: f.querySelector(".prenom").value, ecole: f.querySelector(".ecole").value, niveau: f.querySelector(".niveau").value })),
+    vider: () => { conteneur.replaceChildren(); ajouter(); },
+  };
 }
-$("ajout-enfant").addEventListener("click", ajouterEnfant);
-$("enfants").addEventListener("click", ev => {
-  if (!ev.target.classList.contains("retirer")) return;
-  ev.target.closest(".enfant").remove();
-  numeroter();
-});
-ajouterEnfant();
+const enfantsPublic = blocEnfants($("enfants"), $("ajout-enfant"), "Votre enfant");
 $("depot-form").addEventListener("submit", async ev => {
   ev.preventDefault();
   const etat = $("depot-etat"), bouton = $("depot-bouton");
@@ -413,15 +452,13 @@ $("depot-form").addEventListener("submit", async ev => {
     const photo = await preparer($("depot-photo").files[0]);
     const res = await fetch(API, { method: "POST", body: JSON.stringify({
       action: "depot", vid, nom: $("depot-nom").value,
-      enfants: [...$("enfants").children].map(f => ({
-        prenom: f.querySelector(".prenom").value, ecole: f.querySelector(".ecole").value, niveau: f.querySelector(".niveau").value })), email: $("depot-email").value,
+      enfants: enfantsPublic.valeurs(), email: $("depot-email").value,
       accord: $("depot-accord").checked, piege: $("depot-piege").value, ...photo }) });
     const r = await res.json();
     if (r.erreur) throw new Error(r.erreur);
     $("depot-adresse").textContent = $("depot-email").value;
     $("depot-form").reset();
-    $("enfants").replaceChildren();
-    ajouterEnfant();
+    enfantsPublic.vider();
     etat.textContent = "";
     $("depot-form").hidden = true;
     $("depot-merci").hidden = false;
@@ -439,6 +476,74 @@ $("depot-autre").addEventListener("click", () => {
   $("depot-merci").hidden = true;
   $("depot-form").hidden = false;
   $("depot-form").scrollIntoView({ block: "start", behavior: "smooth" });
+});
+
+let cle = null;
+const admin = body => fetch(API, { method: "POST", body: JSON.stringify({ cle, ...body }) }).then(r => r.json());
+let enfantsAjout = null;
+function ouvrirCoulisses() {
+  $("zone-attente").hidden = $("zone-ajout").hidden = $("titre-classement").hidden = false;
+  if (!enfantsAjout) enfantsAjout = blocEnfants($("ajout-enfants"), $("ajout-plus"), "Enfant");
+  chargerAttente();
+}
+async function chargerAttente() {
+  $("attente-etat").textContent = "Chargement…";
+  $("attente").replaceChildren();
+  try {
+    const r = await admin({ action: "attente" });
+    if (r.erreur) throw new Error(r.erreur);
+    $("attente-etat").textContent = r.photos.length ? `${r.photos.length} photo(s) en attente.` : "Aucune photo en attente.";
+    for (const ph of r.photos) $("attente").append(carte(ph));
+  } catch (e) { $("attente-etat").textContent = "Liste indisponible. Réessayez."; }
+}
+function carte(ph) {
+  const c = document.createElement("div");
+  c.className = "carte";
+  c.innerHTML = `<img class="vignette" alt=""><small class="code"></small><label>Nom affiché<input type="text" maxlength="60"></label>
+    <small class="infos"></small><div class="boutons"><button type="button" class="valider">Valider</button><button type="button" class="refuser">Refuser</button></div><small class="etat"></small>`;
+  c.querySelector(".code").textContent = (ph.code ? `[${ph.code}] ` : "") + "reçue le " + new Date(ph.recue).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+  c.querySelector("input").value = ph.titre;
+  c.querySelector(".infos").textContent = [ph.enfants, ph.email].filter(Boolean).join(" · ") || "Déposée à la main dans le dossier";
+  admin({ action: "apercu", id: ph.id }).then(r => { if (r.data) c.querySelector("img").src = `data:${r.type};base64,${r.data}`; });
+  const etat = c.querySelector(".etat");
+  const agir = async (action, extra) => {
+    c.querySelectorAll("button").forEach(b => { b.disabled = true; });
+    etat.textContent = "En cours…";
+    try {
+      const r = await admin({ action, id: ph.id, ...extra });
+      if (r.erreur) throw new Error(r.erreur);
+      etat.textContent = action === "valider" ? "Validée : en ligne à la prochaine copie (dans l'heure)." : "Refusée : mise à la corbeille du Drive.";
+      setTimeout(() => c.remove(), 2500);
+    } catch (e) {
+      etat.textContent = e.message === "nom" ? "Donnez un nom à la photo." : e.message === "absente" ? "Photo déjà traitée ou déplacée." : "Échec. Réessayez.";
+      c.querySelectorAll("button").forEach(b => { b.disabled = false; });
+    }
+  };
+  c.querySelector(".valider").addEventListener("click", () => agir("valider", { nom: c.querySelector("input").value }));
+  c.querySelector(".refuser").addEventListener("click", () => { if (confirm(`Refuser « ${ph.titre} » ?`)) agir("refuser"); });
+  return c;
+}
+$("attente-maj").addEventListener("click", chargerAttente);
+$("ajout-form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const etat = $("ajout-etat"), bouton = $("ajout-bouton");
+  bouton.disabled = true;
+  etat.className = "";
+  etat.textContent = "Envoi en cours…";
+  try {
+    const photo = await preparer($("ajout-photo").files[0]);
+    const r = await admin({ action: "ajouter", nom: $("ajout-nom").value, enfants: enfantsAjout.valeurs(),
+      canal: $("ajout-canal").value, email: $("ajout-email").value, ...photo });
+    if (r.erreur) throw new Error(r.erreur);
+    $("ajout-form").reset();
+    enfantsAjout.vider();
+    etat.textContent = `Mise en ligne avec le code ${r.code} : visible à la prochaine copie (dans l'heure).`;
+  } catch (e) {
+    etat.className = "erreur";
+    etat.textContent = ERREURS_DEPOT[e.message] || (e.message === "cle" ? "Clé refusée." : "L'envoi n'a pas marché. Réessayez.");
+  } finally {
+    bouton.disabled = false;
+  }
 });
 
 function route() {
