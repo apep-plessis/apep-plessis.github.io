@@ -45,6 +45,8 @@
 .envoi small { display: block; margin-top: 10px; color: var(--ink-soft); }
 .depot { display: grid; gap: 10px; margin-top: 12px; }
 .depot[hidden] { display: none; }
+.envoi .ouvrir { margin-top: 12px; font: inherit; border-radius: 999px; padding: 8px 18px; cursor: pointer;
+  border: 1px solid var(--action); background: var(--action); color: #fff; }
 .depot button .chargement { border-color: rgba(255, 255, 255, .45); border-top-color: #fff; }
 .depot label { display: grid; gap: 4px; font-weight: 700; font-size: .92rem; }
 .depot input[type=text], .depot input[type=email], .depot input[type=file], .depot select { font: inherit; font-weight: 400; border-radius: 12px; padding: 8px 12px;
@@ -141,7 +143,8 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
           <li>Donnez-lui un nom : il apparaîtra sous sa photo.</li>
           <li>Envoyez-nous la photo ci-dessous <b>jusqu'au 20 décembre</b>.</li>
         </ol>
-        <form class="depot" id="depot-form">
+        <button type="button" class="ouvrir" id="depot-ouvrir">Envoyer ma photo</button>
+        <form class="depot" id="depot-form" hidden>
           <label>Photo<input type="file" id="depot-photo" accept="image/*" required></label>
           <label>Nom de la photo<input type="text" id="depot-nom" maxlength="60" required></label>
           <p class="aide">Seuls la photo et son nom sont publiés. Le prénom, l'école et la classe de votre enfant, comme votre e-mail, servent uniquement à vérifier que le concours reste réservé aux familles des écoles du Plessis-Belleville et à retrouver le gagnant.</p>
@@ -473,6 +476,11 @@ $("depot-form").addEventListener("submit", async ev => {
     bouton.disabled = false;
     bouton.textContent = "Envoyer ma photo";
   }
+});
+$("depot-ouvrir").addEventListener("click", () => {
+  $("depot-ouvrir").hidden = true;
+  $("depot-form").hidden = false;
+  $("depot-photo").focus();
 });
 $("depot-autre").addEventListener("click", () => {
   $("depot-merci").hidden = true;
