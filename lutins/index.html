@@ -338,7 +338,7 @@ $("cle-form").addEventListener("submit", async ev => {
     $("rows").innerHTML = r.photos.map((ph, i) => `<tr><td>${i + 1}</td><td><img data-id="${ph.id}" src="${image(ph.id)}" alt=""></td>
       <td></td><td class="num">${ph.duels}</td><td class="num">${Math.round(ph.points)}</td>
       <td class="num${ph.alerte ? (ph.ecart > 0 ? " up" : " down") : ""}">${jourTxt(ph)}${ph.alerte ? " ⚠" : ""}</td><td class="num">${pct(ph.habituel)}</td></tr>`).join("");
-    [...$("rows").rows].forEach((tr, i) => tr.cells[2].textContent = r.photos[i].titre);
+    [...$("rows").rows].forEach((tr, i) => tr.cells[2].textContent = r.photos[i].nom || r.photos[i].titre);
     $("table").hidden = false;
   } catch (e) { $("totaux").textContent = "Classement indisponible."; }
 });
