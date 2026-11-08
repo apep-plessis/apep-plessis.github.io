@@ -39,6 +39,18 @@
 .envoi li + li { margin-top: 6px; }
 .envoi a { color: var(--action); }
 .envoi small { display: block; margin-top: 10px; color: var(--ink-soft); }
+.depot { display: grid; gap: 10px; margin-top: 12px; }
+.depot label { display: grid; gap: 4px; font-weight: 700; font-size: .92rem; }
+.depot input[type=text], .depot input[type=email], .depot input[type=file] { font: inherit; font-weight: 400; border-radius: 12px; padding: 8px 12px;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink); width: 100%; box-sizing: border-box; }
+.depot .case { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; }
+.depot .case input { margin-top: .25em; flex: none; }
+.depot button { justify-self: start; font: inherit; border-radius: 999px; padding: 8px 18px; cursor: pointer;
+  border: 1px solid var(--action); background: var(--action); color: #fff; }
+.depot button:disabled { opacity: .6; cursor: wait; }
+.depot .piege { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+#depot-etat { margin: 0; }
+#depot-etat:empty { display: none; }
 .howto { max-width: 720px; margin: 22px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .howto div { background: var(--card); border-radius: 14px; padding: 12px; font-size: .9rem; color: var(--ink-soft); }
 .howto b { display: block; color: var(--ink); font-weight: 800; }
@@ -100,9 +112,18 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
         <ol>
           <li>Photographiez votre lutin en pleine bêtise, <b>sans enfant</b> sur la photo.</li>
           <li>Donnez-lui un nom : il apparaîtra sous sa photo.</li>
-          <li>Envoyez la photo et son nom <b>jusqu'au 20 décembre</b>, par <a href="https://m.me/61593023807080">Messenger</a> ou à <a href="mailto:apep.plessis@gmail.com?subject=Concours%20des%20lutins">apep.plessis@gmail.com</a>.</li>
+          <li>Envoyez-nous la photo ci-dessous <b>jusqu'au 20 décembre</b>.</li>
         </ol>
-        <small>Chaque photo est vérifiée avant sa mise en ligne. En l'envoyant, vous acceptez sa publication sur ce site et sur nos pages Facebook et Instagram.</small>
+        <form class="depot" id="depot-form">
+          <label>Photo<input type="file" id="depot-photo" accept="image/*" required></label>
+          <label>Nom de la photo<input type="text" id="depot-nom" maxlength="60" required></label>
+          <label>Votre e-mail, pour vous confirmer la réception<input type="email" id="depot-email" autocomplete="email" required></label>
+          <label class="piege" aria-hidden="true">Site<input type="text" id="depot-piege" tabindex="-1" autocomplete="off"></label>
+          <label class="case"><input type="checkbox" id="depot-accord" required>J'accepte que cette photo soit publiée sur ce site et sur les pages Facebook et Instagram de l'APEP.</label>
+          <button type="submit" id="depot-bouton">Envoyer ma photo</button>
+          <p id="depot-etat" role="status"></p>
+        </form>
+        <small>Chaque photo est vérifiée avant sa mise en ligne. Vous pouvez aussi l'envoyer par <a href="https://m.me/61593023807080">Messenger</a> ou à <a href="mailto:apep.plessis@gmail.com?subject=Concours%20des%20lutins">apep.plessis@gmail.com</a>.</small>
       </section>
       <div class="howto">
         <div><b>Un duel, un choix</b>Deux photos, on touche celle qu'on préfère. Le duel suivant arrive tout de suite.</div>
@@ -283,6 +304,47 @@ $("cle-form").addEventListener("submit", async ev => {
     [...$("rows").rows].forEach((tr, i) => tr.cells[2].textContent = r.photos[i].titre);
     $("table").hidden = false;
   } catch (e) { $("totaux").textContent = "Classement indisponible."; }
+});
+
+const COTE_MAX = 1600;
+async function preparer(fichier) {
+  try {
+    const bmp = await createImageBitmap(fichier);
+    const k = Math.min(1, COTE_MAX / Math.max(bmp.width, bmp.height));
+    const c = Object.assign(document.createElement("canvas"), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    const url = c.toDataURL("image/jpeg", 0.85);
+    return { type: "image/jpeg", data: url.slice(url.indexOf(",") + 1) };
+  } catch (e) {
+    const url = await new Promise((ok, ko) => Object.assign(new FileReader(), { onload: ev => ok(ev.target.result), onerror: ko }).readAsDataURL(fichier));
+    return { type: fichier.type || "image/jpeg", data: url.slice(url.indexOf(",") + 1) };
+  }
+}
+const ERREURS_DEPOT = {
+  ferme: "Les dépôts sont terminés depuis le 20 décembre.",
+  quota: "Trop d'envois aujourd'hui : envoyez-nous la photo par Messenger ou par e-mail.",
+  photo: "Ce fichier n'est pas une photo lisible.",
+  champs: "Vérifiez le nom, l'e-mail et la case à cocher.",
+};
+$("depot-form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const etat = $("depot-etat"), bouton = $("depot-bouton");
+  bouton.disabled = true;
+  etat.textContent = "Envoi en cours…";
+  try {
+    const photo = await preparer($("depot-photo").files[0]);
+    const res = await fetch(API, { method: "POST", body: JSON.stringify({
+      action: "depot", nom: $("depot-nom").value, email: $("depot-email").value,
+      accord: $("depot-accord").checked, piege: $("depot-piege").value, ...photo }) });
+    const r = await res.json();
+    if (r.erreur) throw new Error(r.erreur);
+    $("depot-form").reset();
+    etat.textContent = "Merci ! Votre photo est bien arrivée. Un e-mail de confirmation vient de partir.";
+  } catch (e) {
+    etat.textContent = ERREURS_DEPOT[e.message] || "L'envoi n'a pas marché. Réessayez, ou envoyez-nous la photo par Messenger ou par e-mail.";
+  } finally {
+    bouton.disabled = false;
+  }
 });
 
 function route() {
