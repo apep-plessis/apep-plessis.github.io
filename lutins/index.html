@@ -93,6 +93,10 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
 .carte input { font: inherit; border-radius: 10px; padding: 6px 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); width: 100%; box-sizing: border-box; }
 .carte small { color: var(--ink-soft); }
 .carte .boutons { display: flex; gap: 8px; }
+.carte .refus { display: grid; gap: 6px; border-top: 1px solid var(--line-soft); padding-top: 8px; }
+.carte select, .carte textarea { font: inherit; border-radius: 10px; padding: 6px 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); width: 100%; box-sizing: border-box; }
+.carte .case { display: flex; gap: 6px; align-items: center; font-weight: 400; }
+.carte .case input { width: auto; margin: 0; }
 .carte .valider { background: var(--action); border-color: var(--action); color: #fff; }
 .ajout { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 18px; max-width: 720px; }
 .alertes { background: var(--card); border-left: 4px solid var(--action); border-radius: 14px; padding: 10px 14px; margin: 0 0 14px; }
@@ -491,6 +495,12 @@ $("depot-autre").addEventListener("click", () => {
 let cle = null;
 const admin = body => fetch(API, { method: "POST", body: JSON.stringify({ cle, ...body }) }).then(r => r.json());
 let enfantsAjout = null;
+const RAISONS = [
+  "un enfant apparaît sur la photo.",
+  "on ne voit pas de lutin sur la photo.",
+  "la photo est trop floue ou trop sombre.",
+  "un nom de famille apparaît sur la photo.",
+];
 function ouvrirCoulisses() {
   $("zone-attente").hidden = $("zone-ajout").hidden = $("titre-classement").hidden = false;
   if (!enfantsAjout) enfantsAjout = blocEnfants($("ajout-enfants"), $("ajout-plus"), "Enfant");
@@ -510,7 +520,13 @@ function carte(ph) {
   const c = document.createElement("div");
   c.className = "carte";
   c.innerHTML = `<img class="vignette" alt=""><small class="code"></small><label>Nom affiché<input type="text" maxlength="60"></label>
-    <small class="infos"></small><div class="boutons"><button type="button" class="valider">Valider</button><button type="button" class="refuser">Refuser</button></div><small class="etat"></small>`;
+    <small class="infos"></small><div class="boutons"><button type="button" class="valider">Valider</button><button type="button" class="refuser">Refuser</button></div>
+    <div class="refus" hidden>
+      <label>Raison<select class="raison">${RAISONS.map(r => `<option>${r}</option>`).join("")}<option value="">Autre (à écrire ci-dessous)</option></select></label>
+      <textarea class="precision" rows="2" maxlength="250" placeholder="Précision (facultatif)"></textarea>
+      <label class="case"><input type="checkbox" class="prevenir">Prévenir le parent par e-mail</label>
+      <div class="boutons"><button type="button" class="confirmer">Confirmer le refus</button><button type="button" class="annuler">Annuler</button></div>
+    </div><small class="etat"></small>`;
   c.querySelector(".code").textContent = (ph.code ? `[${ph.code}] ` : "") + "reçue le " + new Date(ph.recue).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
   c.querySelector("input").value = ph.titre;
   c.querySelector(".infos").textContent = [ph.enfants, ph.email].filter(Boolean).join(" · ") || "Déposée à la main dans le dossier";
@@ -522,15 +538,26 @@ function carte(ph) {
     try {
       const r = await admin({ action, id: ph.id, ...extra });
       if (r.erreur) throw new Error(r.erreur);
-      etat.textContent = action === "valider" ? "Validée : en ligne à la prochaine copie (dans l'heure)." : "Refusée : mise à la corbeille du Drive.";
+      etat.textContent = action === "valider" ? "Validée : en ligne à la prochaine copie (dans l'heure)."
+        : "Refusée : mise à la corbeille du Drive" + (extra.prevenir ? ", parent prévenu." : ".");
       setTimeout(() => c.remove(), 2500);
     } catch (e) {
-      etat.textContent = e.message === "nom" ? "Donnez un nom à la photo." : e.message === "absente" ? "Photo déjà traitée ou déplacée." : "Échec. Réessayez.";
+      etat.textContent = { nom: "Donnez un nom à la photo.", absente: "Photo déjà traitée ou déplacée.",
+        raison: "Choisissez ou écrivez une raison.", "sans-email": "Pas d'e-mail connu pour ce dépôt." }[e.message] || "Échec. Réessayez.";
       c.querySelectorAll("button").forEach(b => { b.disabled = false; });
     }
   };
   c.querySelector(".valider").addEventListener("click", () => agir("valider", { nom: c.querySelector("input").value }));
-  c.querySelector(".refuser").addEventListener("click", () => { if (confirm(`Refuser « ${ph.titre} » ?`)) agir("refuser"); });
+  const refus = c.querySelector(".refus"), prevenir = c.querySelector(".prevenir");
+  prevenir.checked = Boolean(ph.email);
+  prevenir.disabled = !ph.email;
+  c.querySelector(".refuser").addEventListener("click", () => { refus.hidden = false; });
+  c.querySelector(".annuler").addEventListener("click", () => { refus.hidden = true; });
+  c.querySelector(".confirmer").addEventListener("click", () => {
+    const raison = [c.querySelector(".raison").value, c.querySelector(".precision").value.trim()].filter(Boolean).join(" ");
+    if (prevenir.checked && !raison) { etat.textContent = "Choisissez ou écrivez une raison."; return; }
+    agir("refuser", { prevenir: prevenir.checked, raison });
+  });
   return c;
 }
 $("attente-maj").addEventListener("click", chargerAttente);
