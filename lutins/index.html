@@ -44,6 +44,8 @@
 .envoi a { color: var(--action); }
 .envoi small { display: block; margin-top: 10px; color: var(--ink-soft); }
 .depot { display: grid; gap: 10px; margin-top: 12px; }
+.depot[hidden] { display: none; }
+.depot button .chargement { border-color: rgba(255, 255, 255, .45); border-top-color: #fff; }
 .depot label { display: grid; gap: 4px; font-weight: 700; font-size: .92rem; }
 .depot input[type=text], .depot input[type=email], .depot input[type=file], .depot select { font: inherit; font-weight: 400; border-radius: 12px; padding: 8px 12px;
   border: 1px solid var(--line); background: var(--card); color: var(--ink); width: 100%; box-sizing: border-box; }
@@ -56,7 +58,12 @@
 .enfant { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 0; display: grid; gap: 8px; }
 .enfant legend { font-weight: 700; font-size: .92rem; padding: 0 4px; }
 .depot button.lien { justify-self: start; background: none; border: 0; padding: 0; color: var(--action); text-decoration: underline; border-radius: 0; }
-#depot-etat { margin: 0; }
+#depot-etat { margin: 0; font-weight: 700; }
+#depot-etat.erreur { color: var(--action); }
+.merci { margin-top: 12px; border: 2px solid var(--pal); border-radius: 14px; padding: 14px 16px; text-align: center; }
+.merci b { display: block; font-size: 1.2rem; margin-bottom: 6px; }
+.merci p { margin: 0 0 10px; }
+.merci button { font: inherit; border-radius: 999px; padding: 8px 18px; cursor: pointer; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
 #depot-etat:empty { display: none; }
 .howto { max-width: 720px; margin: 22px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .howto div { background: var(--card); border-radius: 14px; padding: 12px; font-size: .9rem; color: var(--ink-soft); }
@@ -143,6 +150,11 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
           <button type="submit" id="depot-bouton">Envoyer ma photo</button>
           <p id="depot-etat" role="status"></p>
         </form>
+        <div class="merci" id="depot-merci" hidden tabindex="-1">
+          <b>✓ Photo bien reçue !</b>
+          <p>Merci ! Nous la vérifions avant de la mettre en ligne. Un e-mail de confirmation part à <span id="depot-adresse"></span>.</p>
+          <button type="button" id="depot-autre">Envoyer une autre photo</button>
+        </div>
         <small>Chaque photo est vérifiée avant sa mise en ligne. Vous pouvez aussi l'envoyer par <a href="https://m.me/61593023807080">Messenger</a> ou à <a href="mailto:apep.plessis@gmail.com?subject=Concours%20des%20lutins">apep.plessis@gmail.com</a>.</small>
       </section>
       <div class="howto">
@@ -331,7 +343,7 @@ $("cle-form").addEventListener("submit", async ev => {
   } catch (e) { $("totaux").textContent = "Classement indisponible."; }
 });
 
-const COTE_MAX = 1600;
+const COTE_MAX = 1280;
 const TAILLE_MAX = 20 * 1024 * 1024;
 const base64 = blob => new Promise((ok, ko) => Object.assign(new FileReader(),
   { onload: ev => ok(ev.target.result.slice(ev.target.result.indexOf(",") + 1)), onerror: ko }).readAsDataURL(blob));
@@ -344,7 +356,7 @@ async function preparer(fichier) {
   const k = Math.min(1, COTE_MAX / Math.max(bmp.width, bmp.height));
   const c = Object.assign(document.createElement("canvas"), { width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
   c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
-  const url = c.toDataURL("image/jpeg", 0.85);
+  const url = c.toDataURL("image/jpeg", 0.8);
   return { data: url.slice(url.indexOf(",") + 1) };
 }
 const ERREURS_DEPOT = {
@@ -394,7 +406,9 @@ $("depot-form").addEventListener("submit", async ev => {
   ev.preventDefault();
   const etat = $("depot-etat"), bouton = $("depot-bouton");
   bouton.disabled = true;
-  etat.textContent = "Envoi en cours…";
+  bouton.innerHTML = '<span class="chargement" aria-hidden="true"></span>Envoi en cours…';
+  etat.className = "";
+  etat.textContent = "Ça peut prendre une dizaine de secondes : gardez la page ouverte.";
   try {
     const photo = await preparer($("depot-photo").files[0]);
     const res = await fetch(API, { method: "POST", body: JSON.stringify({
@@ -404,15 +418,27 @@ $("depot-form").addEventListener("submit", async ev => {
       accord: $("depot-accord").checked, piege: $("depot-piege").value, ...photo }) });
     const r = await res.json();
     if (r.erreur) throw new Error(r.erreur);
+    $("depot-adresse").textContent = $("depot-email").value;
     $("depot-form").reset();
     $("enfants").replaceChildren();
     ajouterEnfant();
-    etat.textContent = "Merci ! Votre photo est bien arrivée. Un e-mail de confirmation vient de partir.";
+    etat.textContent = "";
+    $("depot-form").hidden = true;
+    $("depot-merci").hidden = false;
+    $("depot-merci").scrollIntoView({ block: "center", behavior: "smooth" });
+    $("depot-merci").focus({ preventScroll: true });
   } catch (e) {
+    etat.className = "erreur";
     etat.textContent = ERREURS_DEPOT[e.message] || "L'envoi n'a pas marché. Réessayez, ou envoyez-nous la photo par Messenger ou par e-mail.";
   } finally {
     bouton.disabled = false;
+    bouton.textContent = "Envoyer ma photo";
   }
+});
+$("depot-autre").addEventListener("click", () => {
+  $("depot-merci").hidden = true;
+  $("depot-form").hidden = false;
+  $("depot-form").scrollIntoView({ block: "start", behavior: "smooth" });
 });
 
 function route() {
