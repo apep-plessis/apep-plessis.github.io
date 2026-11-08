@@ -53,6 +53,9 @@
   border: 1px solid var(--action); background: var(--action); color: #fff; }
 .depot button:disabled { opacity: .6; cursor: wait; }
 .depot .piege { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.enfant { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 0; display: grid; gap: 8px; }
+.enfant legend { font-weight: 700; font-size: .92rem; padding: 0 4px; }
+.depot button.lien { justify-self: start; background: none; border: 0; padding: 0; color: var(--action); text-decoration: underline; border-radius: 0; }
 #depot-etat { margin: 0; }
 #depot-etat:empty { display: none; }
 .howto { max-width: 720px; margin: 22px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -121,14 +124,22 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
         <form class="depot" id="depot-form">
           <label>Photo<input type="file" id="depot-photo" accept="image/*" required></label>
           <label>Nom de la photo<input type="text" id="depot-nom" maxlength="60" required></label>
-          <label>Prénom de votre enfant<input type="text" id="depot-prenom" maxlength="40" required></label>
-          <label>Son école<select id="depot-ecole" required>
-            <option value="">Choisir…</option><option>Pré au Lièvre</option><option>Les Iris</option><option>Louisette Wattier</option>
-          </select></label>
-          <label>Sa classe<select id="depot-niveau" required>
-            <option value="">Choisir…</option><option>Petite section</option><option>Moyenne section</option><option>Grande section</option>
-            <option>CP</option><option>CE1</option><option>CE2</option><option>CM1</option><option>CM2</option>
-          </select></label>
+          <div id="enfants"></div>
+          <button type="button" class="lien" id="ajout-enfant">+ Ajouter un autre enfant</button>
+          <template id="modele-enfant">
+            <fieldset class="enfant">
+              <legend>Votre enfant</legend>
+              <label>Prénom<input type="text" class="prenom" maxlength="40" required></label>
+              <label>École<select class="ecole" required>
+                <option value="">Choisir…</option><option>Pré au Lièvre</option><option>Les Iris</option><option>Louisette Wattier</option>
+              </select></label>
+              <label>Classe<select class="niveau" required>
+                <option value="">Choisir…</option><option>Petite section</option><option>Moyenne section</option><option>Grande section</option>
+                <option>CP</option><option>CE1</option><option>CE2</option><option>CM1</option><option>CM2</option>
+              </select></label>
+              <button type="button" class="lien retirer" hidden>Retirer cet enfant</button>
+            </fieldset>
+          </template>
           <label>Votre e-mail, pour vous confirmer la réception<input type="email" id="depot-email" autocomplete="email" required></label>
           <label class="piege" aria-hidden="true">Site<input type="text" id="depot-piege" tabindex="-1" autocomplete="off"></label>
           <label class="case"><input type="checkbox" id="depot-accord" required>J'accepte que cette photo soit publiée sur ce site et sur les pages Facebook et Instagram de l'APEP.</label>
@@ -346,12 +357,33 @@ const ERREURS_DEPOT = {
   photo: "Ce fichier n'est pas une photo. Formats acceptés : JPEG, PNG, HEIC, WebP, TIFF, GIF, BMP, AVIF.",
   taille: "Cette photo est trop lourde (20 Mo maximum).",
   nom: "Donnez un nom à la photo.",
-  prenom: "Indiquez le prénom de votre enfant.",
-  ecole: "Choisissez l'école de votre enfant.",
-  niveau: "Choisissez la classe de votre enfant.",
+  prenom: "Indiquez le prénom de chaque enfant.",
+  ecole: "Choisissez l'école de chaque enfant.",
+  niveau: "Choisissez la classe de chaque enfant.",
   email: "Cette adresse e-mail ne semble pas valide.",
   accord: "Cochez la case pour accepter la publication de la photo.",
 };
+const ENFANTS_MAX = 5;
+function ajouterEnfant() {
+  const f = $("modele-enfant").content.firstElementChild.cloneNode(true);
+  $("enfants").append(f);
+  numeroter();
+}
+function numeroter() {
+  const tous = [...$("enfants").children];
+  tous.forEach((e, i) => {
+    e.querySelector("legend").textContent = tous.length > 1 ? `Enfant ${i + 1}` : "Votre enfant";
+    e.querySelector(".retirer").hidden = tous.length < 2;
+  });
+  $("ajout-enfant").hidden = tous.length >= ENFANTS_MAX;
+}
+$("ajout-enfant").addEventListener("click", ajouterEnfant);
+$("enfants").addEventListener("click", ev => {
+  if (!ev.target.classList.contains("retirer")) return;
+  ev.target.closest(".enfant").remove();
+  numeroter();
+});
+ajouterEnfant();
 $("depot-form").addEventListener("submit", async ev => {
   ev.preventDefault();
   const etat = $("depot-etat"), bouton = $("depot-bouton");
@@ -361,11 +393,14 @@ $("depot-form").addEventListener("submit", async ev => {
     const photo = await preparer($("depot-photo").files[0]);
     const res = await fetch(API, { method: "POST", body: JSON.stringify({
       action: "depot", vid, nom: $("depot-nom").value,
-      prenom: $("depot-prenom").value, ecole: $("depot-ecole").value, niveau: $("depot-niveau").value, email: $("depot-email").value,
+      enfants: [...$("enfants").children].map(f => ({
+        prenom: f.querySelector(".prenom").value, ecole: f.querySelector(".ecole").value, niveau: f.querySelector(".niveau").value })), email: $("depot-email").value,
       accord: $("depot-accord").checked, piege: $("depot-piege").value, ...photo }) });
     const r = await res.json();
     if (r.erreur) throw new Error(r.erreur);
     $("depot-form").reset();
+    $("enfants").replaceChildren();
+    ajouterEnfant();
     etat.textContent = "Merci ! Votre photo est bien arrivée. Un e-mail de confirmation vient de partir.";
   } catch (e) {
     etat.textContent = ERREURS_DEPOT[e.message] || "L'envoi n'a pas marché. Réessayez, ou envoyez-nous la photo par Messenger ou par e-mail.";
