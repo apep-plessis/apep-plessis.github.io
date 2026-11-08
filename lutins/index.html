@@ -33,6 +33,12 @@
 .follow p { margin: 0 0 8px; }
 .follow a { display: inline-block; margin: 4px 6px; color: var(--action); }
 
+.envoi { max-width: 720px; margin: 18px auto 0; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 18px; }
+.envoi h2 { margin: 0 0 8px; font-size: 1.15rem; }
+.envoi ol { margin: 0; padding-left: 1.3em; }
+.envoi li + li { margin-top: 6px; }
+.envoi a { color: var(--action); }
+.envoi small { display: block; margin-top: 10px; color: var(--ink-soft); }
 .howto { max-width: 720px; margin: 22px auto 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .howto div { background: var(--card); border-radius: 14px; padding: 12px; font-size: .9rem; color: var(--ink-soft); }
 .howto b { display: block; color: var(--ink); font-weight: 800; }
@@ -89,6 +95,15 @@ td img { width: 44px; height: 55px; object-fit: cover; border-radius: 8px; displ
         <button type="button" id="skip">Je n'arrive pas à choisir</button>
       </div>
       <div class="follow" id="follow" hidden></div>
+      <section class="envoi" id="envoi">
+        <h2>Votre lutin aussi peut participer !</h2>
+        <ol>
+          <li>Photographiez votre lutin en pleine bêtise, <b>sans enfant</b> sur la photo.</li>
+          <li>Donnez-lui un nom : il apparaîtra sous sa photo.</li>
+          <li>Envoyez la photo et son nom <b>jusqu'au 20 décembre</b>, par <a href="https://m.me/61593023807080">Messenger</a> ou à <a href="mailto:apep.plessis@gmail.com?subject=Concours%20des%20lutins">apep.plessis@gmail.com</a>.</li>
+        </ol>
+        <small>Chaque photo est vérifiée avant sa mise en ligne. En l'envoyant, vous acceptez sa publication sur ce site et sur nos pages Facebook et Instagram.</small>
+      </section>
       <div class="howto">
         <div><b>Un duel, un choix</b>Deux photos, on touche celle qu'on préfère. Le duel suivant arrive tout de suite.</div>
         <div><b>Jusqu'à 100 votes par jour</b>On s'arrête quand on veut, on revient le lendemain : chaque choix compte.</div>
@@ -132,6 +147,7 @@ import { promosActives, lignePromo } from "../js/promos.js";
 
 const API = "https://script.google.com/macros/s/AKfycbxUkATP8k3pFilHGCCsqRspuAwKN_lH0t2bJkhBGhqufyYD6cCocR0aj67V3Cq-KZT-/exec";
 const FOLLOW_AFTER = 5;
+const FIN_DEPOTS = new Date("2026-12-21T00:00:00+01:00");
 const FACEBOOK = "https://www.facebook.com/people/APEP-Association-des-Parents-d%C3%89l%C3%A8ve-du-Plessis-Belleville/61593023807080/";
 const ENCARTS = [
   { texte: "Merci pour vos votes ! Toutes les photos sont aussi sur nos réseaux.",
@@ -276,6 +292,7 @@ function route() {
 }
 addEventListener("hashchange", route);
 route();
+$("envoi").hidden = Date.now() >= FIN_DEPOTS;
 if (!API) failed();
 else request({ vid });
 </script>
